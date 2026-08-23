@@ -15,6 +15,17 @@ const createSchema = z.object({
 const updateSchema = createSchema.partial().refine((value) => Object.keys(value).length > 0, "Informe ao menos um campo.");
 const associationSchema = z.object({ orderIds: z.array(z.string().min(1)).max(500).transform((ids) => [...new Set(ids)]) });
 const transitionSchema = z.object({ status: z.enum(["SENT_TO_PRODUCTION", "RECEIVED", "READY_FOR_PICKUP", "CLOSED"]) });
+const pickupDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data invalida.").refine((value) => {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+}, "Data invalida.");
+const pickupTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Horario invalido.");
+const pickupAvailabilitySchema = z.object({
+  location: z.string().trim().min(2).max(500),
+  notes: z.string().trim().max(2000).nullable().optional(),
+  date: pickupDateSchema.nullable().optional(),
+  time: pickupTimeSchema.nullable().optional()
+});
 const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
@@ -183,6 +194,43 @@ export const productionBatchRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  app.put("/admin/production-batches/:id/pickup", { preHandler: requireAdmin }, async (request, reply) => {
+    const id = idParams.parse(request.params).id;
+    const input = pickupAvailabilitySchema.parse(request.body);
+    const batch = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`BATCH:${id}`}))`;
+      const current = await tx.productionBatch.findFirst({ where: { id, deletedAt: null }, include: { orders: true } });
+      if (!current) throw Object.assign(new Error("Lote nao encontrado."), { statusCode: 404 });
+      if (!["RECEIVED", "READY_FOR_PICKUP"].includes(current.status)) {
+        throw conflict("O lote precisa estar recebido para disponibilizar a retirada.");
+      }
+      const publishing = current.status === "RECEIVED";
+      if (publishing) {
+        await updateOrderStatuses(tx, current.orders.map((association) => association.orderId), "READY_FOR_PICKUP", request.currentUser!.id, `Lote ${current.code} disponivel para retirada.`);
+      }
+      const updated = await tx.productionBatch.update({
+        where: { id },
+        data: {
+          status: "READY_FOR_PICKUP",
+          pickupLocation: input.location,
+          pickupNotes: input.notes ?? null,
+          pickupDate: input.date ? new Date(`${input.date}T00:00:00.000Z`) : null,
+          pickupTime: input.time ? new Date(`1970-01-01T${input.time}:00.000Z`) : null
+        },
+        include: batchInclude
+      });
+      await tx.auditLog.create({ data: {
+        ...auditContext(request),
+        action: publishing ? "PRODUCTION_BATCH_PICKUP_PUBLISHED" : "PRODUCTION_BATCH_PICKUP_UPDATED",
+        entityType: "ProductionBatch",
+        entityId: id,
+        metadata: { previousStatus: current.status, newStatus: "READY_FOR_PICKUP", location: input.location, date: input.date ?? null, time: input.time ?? null }
+      } });
+      return updated;
+    });
+    return { batch: batchForApi(batch) };
+  });
+
   app.post("/admin/production-batches/:id/transition", { preHandler: requireAdmin }, async (request, reply) => {
     const id = idParams.parse(request.params).id;
     const { status } = transitionSchema.parse(request.body);
@@ -190,8 +238,13 @@ export const productionBatchRoutes: FastifyPluginAsync = async (app) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`BATCH:${id}`}))`;
       const current = await tx.productionBatch.findFirst({ where: { id, deletedAt: null }, include: { orders: true } });
       if (!current) throw Object.assign(new Error("Lote nao encontrado."), { statusCode: 404 });
+      if (status === "READY_FOR_PICKUP") throw conflict("Informe os dados de retirada para disponibilizar o lote.");
       if (nextBatchStatus[current.status] !== status) throw conflict(`Transicao invalida de ${current.status} para ${status}.`);
       if (current.status === "DRAFT" && current.orders.length === 0) throw conflict("Adicione ao menos um pedido antes de enviar para producao.");
+      if (status === "CLOSED") {
+        const pendingPickups = await tx.order.count({ where: { id: { in: current.orders.map((association) => association.orderId) }, fulfillmentStatus: { not: "PICKED_UP" } } });
+        if (pendingPickups > 0) throw conflict("Todos os pedidos precisam ser retirados antes de fechar o lote.");
+      }
       const targetOrderStatus = orderStatusForBatch[status];
       if (targetOrderStatus) await updateOrderStatuses(tx, current.orders.map((association) => association.orderId), targetOrderStatus, request.currentUser!.id, `Lote ${current.code}: ${status}.`);
       const updated = await tx.productionBatch.update({

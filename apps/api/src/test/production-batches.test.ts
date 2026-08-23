@@ -27,6 +27,12 @@ async function adminSession() {
   return { user, headers: { cookie: `ca_session=${token}` } };
 }
 
+async function userHeaders(userId: string) {
+  const token = createRandomToken(48);
+  await prisma.session.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60_000) } });
+  return { cookie: `ca_session=${token}` };
+}
+
 async function catalogFixture() {
   const suffix = createRandomToken(6);
   const product = await prisma.product.create({
@@ -147,7 +153,7 @@ describe("production batches", () => {
     });
     expect(invalidTransition.statusCode).toBe(409);
 
-    for (const status of ["SENT_TO_PRODUCTION", "RECEIVED", "READY_FOR_PICKUP", "CLOSED"] as const) {
+    for (const status of ["SENT_TO_PRODUCTION", "RECEIVED"] as const) {
       const transitioned = await app.inject({
         method: "POST",
         url: `/admin/production-batches/${batchId}/transition`,
@@ -158,12 +164,55 @@ describe("production batches", () => {
       expect(transitioned.json().batch.status).toBe(status);
     }
 
+    const directReady = await app.inject({
+      method: "POST",
+      url: `/admin/production-batches/${batchId}/transition`,
+      headers: admin.headers,
+      payload: { status: "READY_FOR_PICKUP" }
+    });
+    expect(directReady.statusCode).toBe(409);
+
+    const pickup = await app.inject({
+      method: "PUT",
+      url: `/admin/production-batches/${batchId}/pickup`,
+      headers: admin.headers,
+      payload: { location: "Sala do Centro Academico", notes: "Retirada das 18h as 21h.", date: "2026-08-25", time: "18:00" }
+    });
+    expect(pickup.statusCode).toBe(200);
+    expect(pickup.json().batch).toMatchObject({ status: "READY_FOR_PICKUP", pickupLocation: "Sala do Centro Academico", pickupDate: "2026-08-25", pickupTime: "18:00" });
+
+    const buyerHeaders = await userHeaders(fixture.buyer.id);
+    const buyerOrder = await app.inject({ method: "GET", url: `/orders/${firstPaid.publicId}`, headers: buyerHeaders });
+    expect(buyerOrder.json().order.pickup).toEqual({ available: true, pickedUp: false, location: "Sala do Centro Academico", notes: "Retirada das 18h as 21h.", date: "2026-08-25", time: "18:00" });
+    const userCannotPickup = await app.inject({ method: "POST", url: `/admin/orders/${firstPaid.publicId}/pickup`, headers: buyerHeaders, payload: {} });
+    expect(userCannotPickup.statusCode).toBe(403);
+
+    const prematureClose = await app.inject({ method: "POST", url: `/admin/production-batches/${batchId}/transition`, headers: admin.headers, payload: { status: "CLOSED" } });
+    expect(prematureClose.statusCode).toBe(409);
+
+    for (const currentOrder of [firstPaid, secondPaid]) {
+      const pickedUp = await app.inject({ method: "POST", url: `/admin/orders/${currentOrder.publicId}/pickup`, headers: admin.headers, payload: {} });
+      expect(pickedUp.statusCode).toBe(200);
+      expect(pickedUp.json().order.pickup.pickedUp).toBe(true);
+    }
+    const historyCount = await prisma.orderStatusHistory.count({ where: { orderId: firstPaid.id, newFulfillmentStatus: "PICKED_UP" } });
+    const duplicatePickup = await app.inject({ method: "POST", url: `/admin/orders/${firstPaid.publicId}/pickup`, headers: admin.headers, payload: {} });
+    expect(duplicatePickup.statusCode).toBe(200);
+    expect(await prisma.orderStatusHistory.count({ where: { orderId: firstPaid.id, newFulfillmentStatus: "PICKED_UP" } })).toBe(historyCount);
+
+    const pickupHistory = await prisma.orderStatusHistory.findFirstOrThrow({ where: { orderId: firstPaid.id, newFulfillmentStatus: "PICKED_UP" } });
+    expect(pickupHistory).toMatchObject({ changedByUserId: admin.user.id, previousFulfillmentStatus: "READY_FOR_PICKUP", source: "ADMIN" });
+    expect(pickupHistory.createdAt).toBeInstanceOf(Date);
+
+    const closed = await app.inject({ method: "POST", url: `/admin/production-batches/${batchId}/transition`, headers: admin.headers, payload: { status: "CLOSED" } });
+    expect(closed.statusCode).toBe(200);
+
     const finalBatch = await prisma.productionBatch.findUniqueOrThrow({ where: { id: batchId } });
     expect(finalBatch.closedAt).not.toBeNull();
     const finalOrders = await prisma.order.findMany({ where: { id: { in: [firstPaid.id, secondPaid.id] } } });
-    expect(finalOrders.every((entry) => entry.fulfillmentStatus === "READY_FOR_PICKUP")).toBe(true);
+    expect(finalOrders.every((entry) => entry.fulfillmentStatus === "PICKED_UP")).toBe(true);
     expect(await prisma.auditLog.count({ where: { entityType: "ProductionBatch", entityId: batchId } })).toBe(6);
-    expect(await prisma.orderStatusHistory.count({ where: { orderId: firstPaid.id, source: "ADMIN" } })).toBe(4);
+    expect(await prisma.orderStatusHistory.count({ where: { orderId: firstPaid.id, source: "ADMIN" } })).toBe(5);
     await app.close();
   });
 });

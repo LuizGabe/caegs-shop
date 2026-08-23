@@ -66,6 +66,8 @@ export function batchForApi(batch: any, auditLogs: any[] = []) {
     notes: batch.notes,
     pickupLocation: batch.pickupLocation,
     pickupNotes: batch.pickupNotes,
+    pickupDate: batch.pickupDate instanceof Date ? batch.pickupDate.toISOString().slice(0, 10) : null,
+    pickupTime: batch.pickupTime instanceof Date ? batch.pickupTime.toISOString().slice(11, 16) : null,
     createdBy: batch.createdBy,
     createdAt: batch.createdAt,
     updatedAt: batch.updatedAt,
