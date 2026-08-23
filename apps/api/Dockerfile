@@ -3,11 +3,11 @@ WORKDIR /app
 RUN corepack enable
 
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY prisma/schema.prisma prisma/schema.prisma
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 RUN pnpm prisma generate
 
 FROM deps AS build
@@ -21,7 +21,7 @@ FROM node:22-alpine AS runtime
 WORKDIR /app
 RUN corepack enable
 ENV NODE_ENV=production
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY --from=deps /app/node_modules node_modules

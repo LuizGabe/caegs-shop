@@ -3,10 +3,10 @@ WORKDIR /app
 RUN corepack enable
 
 FROM base AS deps
-COPY package.json pnpm-workspace.yaml tsconfig.base.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY apps/web/package.json apps/web/package.json
 COPY packages/shared/package.json packages/shared/package.json
-RUN pnpm install --no-frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 COPY apps/web apps/web

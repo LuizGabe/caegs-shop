@@ -1,0 +1,14 @@
+.git
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+.turbo
+.vite
+coverage
+.env
+.env.*
+!.env.example
+*.log
