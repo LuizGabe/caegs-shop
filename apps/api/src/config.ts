@@ -1,0 +1,24 @@
+import { z } from "zod";
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  DATABASE_URL: z.string().url(),
+  BACKEND_HOST: z.string().default("127.0.0.1"),
+  PORT: z.coerce.number().int().positive().default(3333),
+  FRONTEND_URL: z.string().url().default("http://localhost:5173"),
+  BACKEND_URL: z.string().url().default("http://localhost:3333"),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_REDIRECT_URI: z.string().url().optional(),
+  ASAAS_API_KEY: z.string().optional(),
+  ASAAS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
+  ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  SESSION_SECRET: z.string().min(32).default("development-session-secret-change-before-production"),
+  MAX_QUANTITY_PER_ITEM: z.coerce.number().int().positive().default(20),
+  MAX_TOTAL_ITEMS_PER_ORDER: z.coerce.number().int().positive().default(50),
+  EMAILS_ENABLED: z.coerce.boolean().default(false),
+  TRUST_PROXY: z.coerce.boolean().default(false)
+});
+
+export const config = envSchema.parse(process.env);

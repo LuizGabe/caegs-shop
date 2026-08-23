@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+.turbo/
+.vite/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+Dockerfile.local
