@@ -325,16 +325,19 @@ model AppSetting {
 }
 
 model EmailEvent {
-  id             String    @id @default(cuid())
-  userId         String?
-  orderId        String?
-  type           String
-  enabledAtEvent Boolean
-  provider       String?
-  providerId     String?
-  errorMessage   String?
-  createdAt      DateTime  @default(now())
-  sentAt         DateTime?
+  id               String    @id @default(cuid())
+  deduplicationKey String?   @unique
+  userId           String?
+  orderId          String?
+  type             String
+  enabledAtEvent   Boolean
+  provider         String?
+  providerId       String?
+  errorMessage     String?
+  createdAt        DateTime  @default(now())
+  sentAt           DateTime?
+
+  @@index([type, createdAt])
 }
 
 model AuditLog {

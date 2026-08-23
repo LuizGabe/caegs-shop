@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../../plugins/prisma.js";
+import type { EmailNotification, EmailService } from "../email/service.js";
 
 export const asaasWebhookSchema = z.object({
   id: z.string().trim().min(1).max(200),
@@ -19,7 +20,7 @@ class WebhookValidationError extends Error {
   statusCode = 400;
 }
 
-export async function receiveAsaasWebhook(event: AsaasWebhook) {
+export async function receiveAsaasWebhook(event: AsaasWebhook, emailService: EmailService) {
   let duplicate = false;
   try {
     await prisma.webhookEvent.create({
@@ -37,6 +38,7 @@ export async function receiveAsaasWebhook(event: AsaasWebhook) {
 
   try {
     const processed = await processAsaasWebhook(event);
+    if (processed.notification) await emailService.notify(processed.notification);
     return { duplicate: duplicate || processed.alreadyProcessed };
   } catch (error) {
     await prisma.webhookEvent.updateMany({
@@ -57,23 +59,24 @@ async function processAsaasWebhook(event: AsaasWebhook) {
       where: { provider_providerEventId: { provider: "ASAAS", providerEventId: event.id } }
     });
     if (stored.processingStatus === "PROCESSED" || stored.processingStatus === "IGNORED") {
-      return { alreadyProcessed: true };
+      return { alreadyProcessed: true, notification: null };
     }
 
     const payment = await tx.payment.findUnique({
       where: { providerPaymentId: event.payment.id },
-      include: { order: true }
+      include: { order: { include: { user: { select: { id: true, name: true, email: true } } } } }
     });
     if (!payment) {
       await tx.webhookEvent.update({
         where: { id: stored.id },
         data: { processedAt: new Date(), processingStatus: "IGNORED", errorMessage: null }
       });
-      return { alreadyProcessed: false };
+      return { alreadyProcessed: false, notification: null };
     }
     validatePaymentPayload(event, payment.amount);
 
     const nextStatus = paymentStatusForEvent(event.event);
+    let notification: EmailNotification | null = null;
     if (nextStatus && nextStatus !== payment.status) {
       const now = new Date();
       const nextFulfillment = nextStatus === "CONFIRMED" ? "PAID" : payment.order.fulfillmentStatus;
@@ -106,13 +109,25 @@ async function processAsaasWebhook(event: AsaasWebhook) {
         entityId: payment.id,
         metadata: { provider: "ASAAS", providerEventId: event.id, previousStatus: payment.status, newStatus: nextStatus }
       } });
+      if (nextStatus === "CONFIRMED" || nextStatus === "REFUNDED") {
+        const type = nextStatus === "CONFIRMED" ? "PAYMENT_CONFIRMED" : "PAYMENT_REFUNDED";
+        notification = {
+          type,
+          deduplicationKey: `${type}:${payment.id}`,
+          userId: payment.order.user.id,
+          orderId: payment.order.id,
+          to: payment.order.user.email,
+          name: payment.order.user.name,
+          orderPublicId: payment.order.publicId
+        };
+      }
     }
 
     await tx.webhookEvent.update({
       where: { id: stored.id },
       data: { processedAt: new Date(), processingStatus: "PROCESSED", errorMessage: null }
     });
-    return { alreadyProcessed: false };
+    return { alreadyProcessed: false, notification };
   });
 }
 

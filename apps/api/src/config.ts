@@ -14,6 +14,7 @@ const envSchema = z.object({
   ASAAS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().min(3).default("Centro Academico <noreply@example.com>"),
   SESSION_SECRET: z.string().min(32).default("development-session-secret-change-before-production"),
   MAX_QUANTITY_PER_ITEM: z.coerce.number().int().positive().default(20),
   MAX_TOTAL_ITEMS_PER_ORDER: z.coerce.number().int().positive().default(50),

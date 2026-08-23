@@ -2,8 +2,10 @@ import type { FastifyPluginAsync } from "fastify";
 import { config } from "../../config.js";
 import { safeEqual } from "../../lib/crypto.js";
 import { asaasWebhookSchema, receiveAsaasWebhook } from "./asaas-service.js";
+import type { EmailService } from "../email/service.js";
 
-export const asaasWebhookRoutes: FastifyPluginAsync = async (app) => {
+export function asaasWebhookRoutes(emailService: EmailService): FastifyPluginAsync {
+  return async (app) => {
   app.post("/webhooks/asaas", async (request, reply) => {
     const receivedToken = request.headers["asaas-access-token"];
     if (!config.ASAAS_WEBHOOK_TOKEN || typeof receivedToken !== "string" || !safeEqual(receivedToken, config.ASAAS_WEBHOOK_TOKEN)) {
@@ -13,7 +15,8 @@ export const asaasWebhookRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const event = asaasWebhookSchema.parse(request.body);
-    const result = await receiveAsaasWebhook(event);
+    const result = await receiveAsaasWebhook(event, emailService);
     return reply.status(200).send({ received: true, duplicate: result.duplicate });
   });
-};
+  };
+}

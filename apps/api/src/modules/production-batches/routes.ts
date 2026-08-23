@@ -4,6 +4,8 @@ import { z } from "zod";
 import { prisma } from "../../plugins/prisma.js";
 import { requireAdmin } from "../auth/guards.js";
 import { batchForApi, batchInclude, createBatchCode, nextBatchStatus, orderStatusForBatch } from "./service.js";
+import type { EmailService } from "../email/service.js";
+import type { EmailNotificationType } from "../email/templates.js";
 
 const idParams = z.object({ id: z.string().min(1) });
 const createSchema = z.object({
@@ -48,7 +50,8 @@ function auditContext(request: FastifyRequest) {
   };
 }
 
-export const productionBatchRoutes: FastifyPluginAsync = async (app) => {
+export function productionBatchRoutes(emailService: EmailService): FastifyPluginAsync {
+  return async (app) => {
   app.get("/admin/production-batches", { preHandler: requireAdmin }, async () => {
     const batches = await prisma.productionBatch.findMany({
       include: { createdBy: { select: { id: true, name: true, email: true } }, _count: { select: { orders: true } } },
@@ -228,6 +231,7 @@ export const productionBatchRoutes: FastifyPluginAsync = async (app) => {
       } });
       return updated;
     });
+    await notifyBatchOrders(emailService, "ORDER_READY_FOR_PICKUP", batch);
     return { batch: batchForApi(batch) };
   });
 
@@ -257,9 +261,33 @@ export const productionBatchRoutes: FastifyPluginAsync = async (app) => {
       });
       return updated;
     });
+    if (status === "SENT_TO_PRODUCTION") await notifyBatchOrders(emailService, "ORDER_SENT_TO_PRODUCTION", batch);
     return { batch: batchForApi(batch) };
   });
-};
+  };
+}
+
+async function notifyBatchOrders(emailService: EmailService, type: EmailNotificationType, batch: {
+  pickupLocation: string | null;
+  pickupNotes: string | null;
+  pickupDate: Date | null;
+  pickupTime: Date | null;
+  orders: Array<{ order: { id: string; publicId: string; user: { id: string; name: string; email: string } } }>;
+}) {
+  await Promise.all(batch.orders.map(({ order }) => emailService.notify({
+    type,
+    deduplicationKey: `${type}:${order.id}`,
+    userId: order.user.id,
+    orderId: order.id,
+    to: order.user.email,
+    name: order.user.name,
+    orderPublicId: order.publicId,
+    pickupLocation: batch.pickupLocation,
+    pickupNotes: batch.pickupNotes,
+    pickupDate: batch.pickupDate?.toISOString().slice(0, 10) ?? null,
+    pickupTime: batch.pickupTime?.toISOString().slice(11, 16) ?? null
+  })));
+}
 
 async function updateOrderStatuses(tx: Pick<typeof prisma, "order" | "orderStatusHistory">, orderIds: string[], status: OrderFulfillmentStatus, actorUserId: string, note: string) {
   if (!orderIds.length) return;

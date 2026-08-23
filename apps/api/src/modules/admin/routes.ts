@@ -11,12 +11,35 @@ const updateUserCourseParamsSchema = z.object({
 const updateUserCourseBodySchema = z.object({
   courseId: z.string().min(1)
 });
+const emailSettingsSchema = z.object({ enabled: z.boolean() });
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
   app.get("/admin/auth-check", { preHandler: requireAdmin }, async (request) => ({
     ok: true,
     user: request.currentUser
   }));
+
+  app.get("/admin/settings/emails", { preHandler: requireAdmin }, async () => {
+    const setting = await prisma.appSetting.findUnique({ where: { key: "emailsEnabled" } });
+    return { enabled: setting?.value === true };
+  });
+
+  app.patch("/admin/settings/emails", { preHandler: requireAdmin }, async (request) => {
+    const { enabled } = emailSettingsSchema.parse(request.body);
+    await prisma.$transaction(async (tx) => {
+      const current = await tx.appSetting.findUnique({ where: { key: "emailsEnabled" } });
+      await tx.appSetting.upsert({ where: { key: "emailsEnabled" }, update: { value: enabled }, create: { key: "emailsEnabled", value: enabled } });
+      await tx.auditLog.create({ data: {
+        actorUserId: request.currentUser!.id,
+        action: "EMAIL_SETTINGS_UPDATED",
+        entityType: "AppSetting",
+        entityId: "emailsEnabled",
+        metadata: { previousEnabled: current?.value === true, enabled },
+        ...auditRequestContext(request)
+      } });
+    });
+    return { enabled };
+  });
 
   app.patch("/admin/users/:userId/course", { preHandler: requireAdmin }, async (request, reply) => {
     const actorUser = request.currentUser;
