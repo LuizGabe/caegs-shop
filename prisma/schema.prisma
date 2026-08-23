@@ -232,21 +232,26 @@ model OrderItem {
 }
 
 model Payment {
-  id                String          @id @default(cuid())
-  orderId           String
-  provider          PaymentProvider
-  providerPaymentId String?         @unique
-  method            PaymentMethod
-  status            PaymentStatus   @default(PENDING)
-  amount            Decimal         @db.Decimal(12, 2)
-  pixQrCodeImage    String?
-  pixCopyPasteCode  String?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  confirmedAt       DateTime?
-  refundedAt        DateTime?
+  id                 String          @id @default(cuid())
+  orderId            String
+  idempotencyKey     String          @unique
+  provider           PaymentProvider
+  providerCustomerId String?
+  providerPaymentId  String?         @unique
+  method             PaymentMethod
+  status             PaymentStatus   @default(PENDING)
+  amount             Decimal         @db.Decimal(12, 2)
+  pixQrCodeImage     String?
+  pixCopyPasteCode   String?
+  pixExpiresAt       DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  confirmedAt        DateTime?
+  refundedAt         DateTime?
 
   order Order @relation(fields: [orderId], references: [id])
+
+  @@index([orderId, createdAt])
 }
 
 model WebhookEvent {

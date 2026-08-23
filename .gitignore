@@ -10,3 +10,4 @@ coverage/
 *.log
 Dockerfile.local
 *.tsbuildinfo
+apps/api/uploads/

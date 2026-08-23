@@ -11,9 +11,13 @@ import { courseRoutes } from "./modules/users/routes.js";
 import { prisma } from "./plugins/prisma.js";
 import { productRoutes } from "./modules/products/routes.js";
 import { orderRoutes } from "./modules/orders/routes.js";
+import { createAsaasPaymentProvider } from "./modules/payments/asaas.js";
+import type { PaymentProvider } from "./modules/payments/provider.js";
+import { paymentRoutes } from "./modules/payments/routes.js";
 
 export type BuildAppOptions = {
   authProvider?: GoogleAuthProvider;
+  paymentProvider?: PaymentProvider;
 };
 
 function getStatusCode(error: unknown) {
@@ -93,6 +97,7 @@ export function buildApp(options: BuildAppOptions = {}) {
   app.register(adminRoutes);
   app.register(productRoutes);
   app.register(orderRoutes);
+  app.register(paymentRoutes(options.paymentProvider ?? createAsaasPaymentProvider()));
 
   app.setErrorHandler((error, _request, reply) => {
     const statusCode = getStatusCode(error);
