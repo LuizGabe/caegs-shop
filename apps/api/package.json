@@ -9,20 +9,23 @@
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "echo \"API tests will be added with critical rules\""
+    "test": "vitest run"
   },
   "dependencies": {
     "@ca/shared": "workspace:*",
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^10.0.2",
     "@fastify/helmet": "^13.0.1",
     "@fastify/rate-limit": "^10.2.1",
     "@prisma/client": "^6.0.1",
     "fastify": "^5.1.0",
+    "jose": "^6.2.10",
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "prisma": "^6.0.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "prisma": "^6.0.1"
+    "vitest": "^4.1.11"
   }
 }
