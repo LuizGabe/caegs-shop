@@ -28,6 +28,22 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
 
 export const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
+export async function downloadCsv(path: string, filename: string) {
+  const response = await fetch(`${apiUrl}${path}`, { credentials: "include" });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(body?.error?.message ?? "Nao foi possivel exportar o relatorio.", response.status, body?.error?.code);
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 export type Variant = { id: string; name: string; active: boolean; displayOrder: number };
 export type ProductImage = { id: string; url: string; altText: string; type: "PRODUCT" | "SIZE_GUIDE"; displayOrder: number };
 export type Product = {

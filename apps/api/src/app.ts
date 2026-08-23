@@ -16,6 +16,7 @@ import type { PaymentProvider } from "./modules/payments/provider.js";
 import { paymentRoutes } from "./modules/payments/routes.js";
 import { asaasWebhookRoutes } from "./modules/webhooks/asaas-routes.js";
 import { productionBatchRoutes } from "./modules/production-batches/routes.js";
+import { reportRoutes } from "./modules/reports/routes.js";
 
 export type BuildAppOptions = {
   authProvider?: GoogleAuthProvider;
@@ -102,6 +103,7 @@ export function buildApp(options: BuildAppOptions = {}) {
   app.register(paymentRoutes(options.paymentProvider ?? createAsaasPaymentProvider()));
   app.register(asaasWebhookRoutes);
   app.register(productionBatchRoutes);
+  app.register(reportRoutes);
 
   app.setErrorHandler((error, _request, reply) => {
     const statusCode = getStatusCode(error);
