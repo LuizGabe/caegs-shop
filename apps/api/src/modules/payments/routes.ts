@@ -1,8 +1,7 @@
 import { Prisma } from "@prisma/client";
 import type { FastifyPluginAsync } from "fastify";
 import { z } from "zod";
-import { config } from "../../config.js";
-import { hashToken, safeEqual } from "../../lib/crypto.js";
+import { hashToken } from "../../lib/crypto.js";
 import { prisma } from "../../plugins/prisma.js";
 import { requireAuthenticated } from "../auth/guards.js";
 import { createOrderSchema, createPublicOrderId, orderForApi, orderInclude } from "../orders/service.js";
@@ -12,15 +11,6 @@ import { paymentForApi, paymentInclude } from "./service.js";
 const idempotencyHeader = z.string().trim().min(16).max(200);
 const cpfCnpjSchema = z.string().transform((value) => value.replace(/\D/g, "")).refine(isValidCpfCnpj, "CPF ou CNPJ invalido.");
 const publicIdParams = z.object({ publicId: z.string().min(10).max(100) });
-const webhookSchema = z.object({
-  id: z.string().min(1),
-  event: z.string().min(1),
-  payment: z.object({
-    id: z.string().min(1),
-    billingType: z.string().optional(),
-    value: z.coerce.number().positive().optional()
-  })
-});
 
 const saleWindow = () => ({
   active: true,
@@ -137,22 +127,6 @@ export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
       return { payment: paymentForApi(payment) };
     });
 
-    app.post("/webhooks/asaas", async (request, reply) => {
-      const receivedToken = request.headers["asaas-access-token"];
-      if (!config.ASAAS_WEBHOOK_TOKEN || typeof receivedToken !== "string" || !safeEqual(receivedToken, config.ASAAS_WEBHOOK_TOKEN)) {
-        return reply.status(401).send({ error: { code: "INVALID_WEBHOOK_TOKEN", message: "Webhook nao autorizado." } });
-      }
-      const event = webhookSchema.parse(request.body);
-      try {
-        await processWebhook(event);
-      } catch (error) {
-        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-          return reply.status(200).send({ received: true, duplicate: true });
-        }
-        throw error;
-      }
-      return reply.status(200).send({ received: true });
-    });
   };
 }
 
@@ -191,64 +165,6 @@ async function ensurePixData(provider: PaymentProvider, paymentId: string, cpfCn
     }
     return payment;
   }, { timeout: 30_000 });
-}
-
-async function processWebhook(event: z.infer<typeof webhookSchema>) {
-  await prisma.$transaction(async (tx) => {
-    const storedEvent = await tx.webhookEvent.create({
-      data: {
-        provider: "ASAAS",
-        providerEventId: event.id,
-        eventType: event.event,
-        payload: event as Prisma.InputJsonValue
-      }
-    });
-    const payment = await tx.payment.findUnique({ where: { providerPaymentId: event.payment.id }, include: { order: true } });
-    if (!payment) {
-      await tx.webhookEvent.update({ where: { id: storedEvent.id }, data: { processedAt: new Date(), processingStatus: "IGNORED" } });
-      return;
-    }
-    if (event.payment.billingType && event.payment.billingType !== "PIX") {
-      throw Object.assign(new Error("Forma de pagamento inesperada no webhook."), { statusCode: 400 });
-    }
-    if (event.payment.value !== undefined && new Prisma.Decimal(event.payment.value).comparedTo(payment.amount) !== 0) {
-      throw Object.assign(new Error("Valor divergente no webhook."), { statusCode: 400 });
-    }
-
-    const next = webhookPaymentStatus(event.event);
-    if (next && next !== payment.status) {
-      const confirmedAt = next === "CONFIRMED" ? new Date() : payment.confirmedAt;
-      const refundedAt = next === "REFUNDED" ? new Date() : payment.refundedAt;
-      await tx.payment.update({ where: { id: payment.id }, data: { status: next, confirmedAt, refundedAt } });
-      await tx.order.update({
-        where: { id: payment.orderId },
-        data: {
-          paymentStatus: next,
-          ...(next === "CONFIRMED" ? { fulfillmentStatus: "PAID" } : {})
-        }
-      });
-      await tx.orderStatusHistory.create({
-        data: {
-          orderId: payment.orderId,
-          previousPaymentStatus: payment.order.paymentStatus,
-          newPaymentStatus: next,
-          previousFulfillmentStatus: payment.order.fulfillmentStatus,
-          newFulfillmentStatus: next === "CONFIRMED" ? "PAID" : payment.order.fulfillmentStatus,
-          source: "WEBHOOK",
-          note: `Asaas: ${event.event}`
-        }
-      });
-    }
-    await tx.webhookEvent.update({ where: { id: storedEvent.id }, data: { processedAt: new Date(), processingStatus: "PROCESSED" } });
-  });
-}
-
-function webhookPaymentStatus(eventType: string) {
-  if (eventType === "PAYMENT_RECEIVED") return "CONFIRMED" as const;
-  if (eventType === "PAYMENT_REFUNDED") return "REFUNDED" as const;
-  if (eventType === "PAYMENT_REFUND_IN_PROGRESS") return "REFUND_PENDING" as const;
-  if (eventType === "PAYMENT_DELETED") return "CANCELLED" as const;
-  return null;
 }
 
 function isValidCpfCnpj(value: string) {

@@ -123,38 +123,4 @@ describe("PIX checkout", () => {
     await app.close();
   });
 
-  it("confirms payment only through an authenticated idempotent webhook", async () => {
-    const paymentProvider = provider();
-    const app = buildApp({ paymentProvider });
-    const buyer = await session();
-    const item = await product();
-    const checkout = await app.inject({
-      method: "POST",
-      url: "/checkout",
-      headers: { cookie: buyer.cookie, "idempotency-key": createRandomToken(24) },
-      payload: { cpfCnpj: "24971563792", items: [{ productId: item.id, productVariantId: item.variants[0]!.id, quantity: 1 }] }
-    });
-    const body = checkout.json();
-    const event = {
-      id: `evt_${createRandomToken(12)}`,
-      event: "PAYMENT_RECEIVED",
-      payment: { id: `pay_${body.payment.id}`, billingType: "PIX", value: 49.9 }
-    };
-
-    const denied = await app.inject({ method: "POST", url: "/webhooks/asaas", payload: event });
-    expect(denied.statusCode).toBe(401);
-
-    const headers = { "asaas-access-token": process.env.ASAAS_WEBHOOK_TOKEN! };
-    const accepted = await app.inject({ method: "POST", url: "/webhooks/asaas", headers, payload: event });
-    const duplicate = await app.inject({ method: "POST", url: "/webhooks/asaas", headers, payload: event });
-    expect(accepted.statusCode).toBe(200);
-    expect(duplicate.json()).toMatchObject({ received: true, duplicate: true });
-
-    const payment = await prisma.payment.findUniqueOrThrow({ where: { id: body.payment.id }, include: { order: true } });
-    expect(payment.status).toBe("CONFIRMED");
-    expect(payment.confirmedAt).not.toBeNull();
-    expect(payment.order.paymentStatus).toBe("CONFIRMED");
-    expect(payment.order.fulfillmentStatus).toBe("PAID");
-    await app.close();
-  });
 });
