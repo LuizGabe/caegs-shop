@@ -69,33 +69,36 @@ enum ProductionBatchStatus {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  googleSubject   String    @unique
-  name            String
-  email           String    @unique
-  avatarUrl       String?
-  role            UserRole  @default(USER)
-  courseId        String?
+  id                String    @id @default(cuid())
+  googleSubject     String    @unique
+  name              String
+  email             String    @unique
+  avatarUrl         String?
+  role              UserRole  @default(USER)
+  courseId          String?
   courseConfirmedAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
 
-  course          Course?   @relation(fields: [courseId], references: [id])
-  sessions        Session[]
-  orders          Order[]
-  auditLogs       AuditLog[] @relation("AuditActor")
+  course    Course?    @relation(fields: [courseId], references: [id])
+  sessions  Session[]
+  orders    Order[]
+  auditLogs AuditLog[] @relation("AuditActor")
+
+  @@index([deletedAt])
+  @@index([courseId])
 }
 
 model Session {
-  id         String   @id @default(cuid())
-  userId     String
-  tokenHash  String   @unique
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime @default(now())
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Course {
@@ -107,44 +110,53 @@ model Course {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
 
-  users       User[]
+  users User[]
+
+  @@index([deletedAt])
+  @@index([canPurchase, deletedAt])
 }
 
 model Product {
-  id           String           @id @default(cuid())
+  id           String    @id @default(cuid())
   name         String
-  slug         String           @unique
+  slug         String    @unique
   description  String
-  costPrice    Decimal          @db.Decimal(12, 2)
-  salePrice    Decimal          @db.Decimal(12, 2)
-  active       Boolean          @default(false)
-  featured     Boolean          @default(false)
-  displayOrder Int              @default(0)
+  costPrice    Decimal   @db.Decimal(12, 2)
+  salePrice    Decimal   @db.Decimal(12, 2)
+  active       Boolean   @default(false)
+  featured     Boolean   @default(false)
+  displayOrder Int       @default(0)
   salesStartAt DateTime?
   salesEndAt   DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  variants     ProductVariant[]
-  images       ProductImage[]
-  orderItems   OrderItem[]
+  variants   ProductVariant[]
+  images     ProductImage[]
+  orderItems OrderItem[]
+
+  @@index([active, deletedAt, displayOrder])
+  @@index([featured, deletedAt, displayOrder])
+  @@index([deletedAt])
 }
 
 model ProductVariant {
-  id           String      @id @default(cuid())
+  id           String    @id @default(cuid())
   productId    String
   name         String
-  displayOrder Int         @default(0)
-  active       Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  displayOrder Int       @default(0)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  product      Product     @relation(fields: [productId], references: [id])
-  orderItems   OrderItem[]
+  product    Product     @relation(fields: [productId], references: [id])
+  orderItems OrderItem[]
 
   @@unique([productId, name])
+  @@index([productId, active, deletedAt, displayOrder])
+  @@index([deletedAt])
 }
 
 model ProductImage {
@@ -158,7 +170,10 @@ model ProductImage {
   updatedAt    DateTime         @updatedAt
   deletedAt    DateTime?
 
-  product      Product          @relation(fields: [productId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([productId, type, deletedAt, displayOrder])
+  @@index([deletedAt])
 }
 
 model Announcement {
@@ -172,21 +187,25 @@ model Announcement {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
+
+  @@index([active, deletedAt, displayOrder])
+  @@index([startsAt, endsAt])
+  @@index([deletedAt])
 }
 
 model Order {
-  id                    String                 @id @default(cuid())
-  publicId              String                 @unique
-  userId                String
-  paymentStatus         PaymentStatus          @default(PENDING)
-  fulfillmentStatus     OrderFulfillmentStatus @default(WAITING_PAYMENT)
-  subtotal              Decimal                @db.Decimal(12, 2)
-  total                 Decimal                @db.Decimal(12, 2)
-  cancelledAt           DateTime?
-  cancelledByUserId     String?
-  cancellationReason    String?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
+  id                 String                 @id @default(cuid())
+  publicId           String                 @unique
+  userId             String
+  paymentStatus      PaymentStatus          @default(PENDING)
+  fulfillmentStatus  OrderFulfillmentStatus @default(WAITING_PAYMENT)
+  subtotal           Decimal                @db.Decimal(12, 2)
+  total              Decimal                @db.Decimal(12, 2)
+  cancelledAt        DateTime?
+  cancelledByUserId  String?
+  cancellationReason String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   user                  User                   @relation(fields: [userId], references: [id])
   items                 OrderItem[]
@@ -207,9 +226,9 @@ model OrderItem {
   totalPrice          Decimal  @db.Decimal(12, 2)
   createdAt           DateTime @default(now())
 
-  order               Order    @relation(fields: [orderId], references: [id])
-  product             Product  @relation(fields: [productId], references: [id])
-  productVariant      ProductVariant @relation(fields: [productVariantId], references: [id])
+  order          Order          @relation(fields: [orderId], references: [id])
+  product        Product        @relation(fields: [productId], references: [id])
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
 }
 
 model Payment {
@@ -227,36 +246,36 @@ model Payment {
   confirmedAt       DateTime?
   refundedAt        DateTime?
 
-  order             Order           @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
 }
 
 model WebhookEvent {
-  id                String                  @id @default(cuid())
-  provider          PaymentProvider
-  providerEventId   String
-  eventType         String
-  payload           Json?
-  receivedAt        DateTime                @default(now())
-  processedAt       DateTime?
-  processingStatus  WebhookProcessingStatus @default(RECEIVED)
-  errorMessage      String?
+  id               String                  @id @default(cuid())
+  provider         PaymentProvider
+  providerEventId  String
+  eventType        String
+  payload          Json?
+  receivedAt       DateTime                @default(now())
+  processedAt      DateTime?
+  processingStatus WebhookProcessingStatus @default(RECEIVED)
+  errorMessage     String?
 
   @@unique([provider, providerEventId])
 }
 
 model OrderStatusHistory {
-  id                         String                  @id @default(cuid())
-  orderId                    String
-  previousPaymentStatus      PaymentStatus?
-  newPaymentStatus           PaymentStatus?
-  previousFulfillmentStatus  OrderFulfillmentStatus?
-  newFulfillmentStatus       OrderFulfillmentStatus?
-  changedByUserId            String?
-  source                     StatusChangeSource
-  note                       String?
-  createdAt                  DateTime                @default(now())
+  id                        String                  @id @default(cuid())
+  orderId                   String
+  previousPaymentStatus     PaymentStatus?
+  newPaymentStatus          PaymentStatus?
+  previousFulfillmentStatus OrderFulfillmentStatus?
+  newFulfillmentStatus      OrderFulfillmentStatus?
+  changedByUserId           String?
+  source                    StatusChangeSource
+  note                      String?
+  createdAt                 DateTime                @default(now())
 
-  order                      Order                   @relation(fields: [orderId], references: [id])
+  order Order @relation(fields: [orderId], references: [id])
 }
 
 model ProductionBatch {
@@ -270,7 +289,7 @@ model ProductionBatch {
   updatedAt      DateTime              @updatedAt
   deletedAt      DateTime?
 
-  orders         ProductionBatchOrder[]
+  orders ProductionBatchOrder[]
 }
 
 model ProductionBatchOrder {
@@ -278,8 +297,8 @@ model ProductionBatchOrder {
   orderId           String
   createdAt         DateTime @default(now())
 
-  productionBatch   ProductionBatch @relation(fields: [productionBatchId], references: [id])
-  order             Order           @relation(fields: [orderId], references: [id])
+  productionBatch ProductionBatch @relation(fields: [productionBatchId], references: [id])
+  order           Order           @relation(fields: [orderId], references: [id])
 
   @@id([productionBatchId, orderId])
 }
@@ -315,5 +334,5 @@ model AuditLog {
   userAgent   String?
   createdAt   DateTime @default(now())
 
-  actor       User?    @relation("AuditActor", fields: [actorUserId], references: [id])
+  actor User? @relation("AuditActor", fields: [actorUserId], references: [id])
 }
