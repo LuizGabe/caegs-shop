@@ -40,7 +40,7 @@ function publicUser(user: Awaited<ReturnType<typeof getAuthenticatedUser>>) {
 
 export function authRoutes(authProvider: GoogleAuthProvider): FastifyPluginAsync {
   return async function registerAuthRoutes(app) {
-    app.get("/auth/google", async (_request, reply) => {
+    app.get("/auth/google", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (_request, reply) => {
       const state = createRandomToken();
       const nonce = createRandomToken();
       const cookieOptions = { ...getCookieOptions(config.NODE_ENV === "production"), maxAge: 60 * 10 };
@@ -50,7 +50,7 @@ export function authRoutes(authProvider: GoogleAuthProvider): FastifyPluginAsync
       return reply.redirect(buildGoogleAuthorizationUrl(state, nonce));
     });
 
-    app.get("/auth/google/callback", async (request, reply) => {
+    app.get("/auth/google/callback", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
       const query = callbackQuerySchema.parse(request.query);
       const expectedState = request.cookies[oauthStateCookieName];
       const expectedNonce = request.cookies[oauthNonceCookieName];

@@ -69,6 +69,18 @@ async function order(paymentStatus: "PENDING" | "CONFIRMED") {
 }
 
 describe("admin order cancellation", () => {
+  it("blocks cancellation and unpaid progression through the generic status route", async () => {
+    const app = buildApp({ paymentProvider: provider(), emailService });
+    const admin = await session("ADMIN");
+    const target = await order("PENDING");
+    const cancelled = await app.inject({ method: "PATCH", url: `/admin/orders/${target.publicId}/status`, headers: { cookie: admin.cookie }, payload: { fulfillmentStatus: "CANCELLED" } });
+    const progressed = await app.inject({ method: "PATCH", url: `/admin/orders/${target.publicId}/status`, headers: { cookie: admin.cookie }, payload: { fulfillmentStatus: "IN_PRODUCTION" } });
+    expect(cancelled.statusCode).toBe(400);
+    expect(progressed.statusCode).toBe(409);
+    expect(await prisma.order.findUniqueOrThrow({ where: { id: target.id } })).toMatchObject({ paymentStatus: "PENDING", fulfillmentStatus: "WAITING_PAYMENT" });
+    await app.close();
+  });
+
   it("requests one Asaas refund for a confirmed PIX and remains idempotent", async () => {
     const paymentProvider = provider();
     const app = buildApp({ paymentProvider, emailService });

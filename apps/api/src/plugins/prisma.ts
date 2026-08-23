@@ -2,7 +2,7 @@ import { Prisma, PrismaClient } from "@prisma/client";
 
 const softDeleteModels = new Set(["User", "Course", "Product", "ProductVariant", "ProductImage", "Announcement", "ProductionBatch"]);
 
-const softDeleteReadOperations = new Set(["findFirst", "findMany", "count"]);
+const softDeleteReadOperations = new Set(["findFirst", "findMany", "findUnique", "findUniqueOrThrow", "count"]);
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

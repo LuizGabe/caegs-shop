@@ -1,5 +1,5 @@
 import { Prisma, type OrderFulfillmentStatus } from "@prisma/client";
-import type { FastifyPluginAsync, FastifyRequest } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { prisma } from "../../plugins/prisma.js";
 import { requireAdmin } from "../auth/guards.js";
@@ -34,7 +34,7 @@ const paginationSchema = z.object({
   search: z.string().trim().max(100).optional()
 });
 
-function notFound(reply: any) {
+function notFound(reply: FastifyReply) {
   return reply.status(404).send({ error: { code: "BATCH_NOT_FOUND", message: "Lote nao encontrado." } });
 }
 

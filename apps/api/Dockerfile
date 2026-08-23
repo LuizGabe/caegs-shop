@@ -31,4 +31,4 @@ COPY --from=build /app/apps/api/dist apps/api/dist
 COPY --from=build /app/packages/shared/dist packages/shared/dist
 COPY prisma prisma
 EXPOSE 3333
-CMD ["pnpm", "--filter", "@ca/api", "start"]
+CMD ["sh", "-c", "pnpm prisma migrate deploy && pnpm --filter @ca/api start"]

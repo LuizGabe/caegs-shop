@@ -105,6 +105,11 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const data = productBase.partial().parse(request.body);
     const current = await prisma.product.findFirst({ where: { id } });
     if (!current) return missing(reply);
+    const salesStartAt = data.salesStartAt === undefined ? current.salesStartAt : data.salesStartAt ? new Date(data.salesStartAt) : null;
+    const salesEndAt = data.salesEndAt === undefined ? current.salesEndAt : data.salesEndAt ? new Date(data.salesEndAt) : null;
+    if (salesStartAt && salesEndAt && salesEndAt <= salesStartAt) {
+      return reply.status(400).send({ error: { code: "INVALID_SALES_WINDOW", message: "O fim das vendas deve ser posterior ao inicio." } });
+    }
     const slug = data.name ? await uniqueSlug(data.name, id) : undefined;
     const product = await prisma.$transaction(async (tx) => {
       const updated = await tx.product.update({

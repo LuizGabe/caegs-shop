@@ -134,7 +134,7 @@ describe("administrative reports", () => {
     expect(dashboard.statusCode).toBe(200);
     const data = dashboard.json();
     expect(data.unitsByProduct).toContainEqual({ productId: product.id, name: product.name, quantity: 2 });
-    expect(data.unitsByProduct.some((entry: any) => entry.productId === refundedProduct.id)).toBe(false);
+    expect(data.unitsByProduct.some((entry: { productId: string }) => entry.productId === refundedProduct.id)).toBe(false);
     expect(data.unitsByVariant).toContainEqual({ name: sizeName, quantity: 5 });
     expect(data.metrics.confirmedValue).toBeLessThan(999999);
     expect(data.metrics.batches).toBeGreaterThanOrEqual(1);

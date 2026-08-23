@@ -108,8 +108,8 @@ describe("production batches", () => {
 
     const eligible = await app.inject({ method: "GET", url: `/admin/production-batches/${batchId}/eligible-orders`, headers: admin.headers });
     expect(eligible.statusCode).toBe(200);
-    expect(eligible.json().orders.map((entry: any) => entry.id)).toEqual(expect.arrayContaining([firstPaid.id, secondPaid.id]));
-    expect(eligible.json().orders.map((entry: any) => entry.id)).not.toContain(unpaid.id);
+    expect(eligible.json().orders.map((entry: { id: string }) => entry.id)).toEqual(expect.arrayContaining([firstPaid.id, secondPaid.id]));
+    expect(eligible.json().orders.map((entry: { id: string }) => entry.id)).not.toContain(unpaid.id);
 
     const denied = await app.inject({
       method: "PUT",

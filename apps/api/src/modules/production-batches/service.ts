@@ -1,4 +1,4 @@
-import type { OrderFulfillmentStatus, Prisma, ProductionBatchStatus } from "@prisma/client";
+import type { AuditLog, OrderFulfillmentStatus, Prisma, ProductionBatchStatus } from "@prisma/client";
 import { createRandomToken } from "../../lib/crypto.js";
 
 export const batchInclude = {
@@ -57,7 +57,9 @@ export function batchSummary(batchOrders: Array<{ order: { items: Array<{ produc
   })).sort((left, right) => left.productName.localeCompare(right.productName, "pt-BR"));
 }
 
-export function batchForApi(batch: any, auditLogs: any[] = []) {
+type BatchForApiInput = Prisma.ProductionBatchGetPayload<{ include: typeof batchInclude }>;
+
+export function batchForApi(batch: BatchForApiInput, auditLogs: AuditLog[] = []) {
   return {
     id: batch.id,
     code: batch.code,
@@ -72,7 +74,7 @@ export function batchForApi(batch: any, auditLogs: any[] = []) {
     createdAt: batch.createdAt,
     updatedAt: batch.updatedAt,
     closedAt: batch.closedAt,
-    orders: batch.orders.map(({ order, createdAt }: any) => ({
+    orders: batch.orders.map(({ order, createdAt }) => ({
       id: order.id,
       publicId: order.publicId,
       user: order.user,
@@ -80,7 +82,7 @@ export function batchForApi(batch: any, auditLogs: any[] = []) {
       paymentStatus: order.paymentStatus,
       fulfillmentStatus: order.fulfillmentStatus,
       associatedAt: createdAt,
-      items: order.items.map((item: any) => ({
+      items: order.items.map((item) => ({
         id: item.id,
         productName: item.productNameSnapshot,
         variantName: item.variantNameSnapshot,

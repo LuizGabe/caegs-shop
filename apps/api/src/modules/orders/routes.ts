@@ -25,6 +25,12 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
   app.post("/orders", { preHandler: requireAuthenticated }, async (request, reply) => {
     const input = createOrderSchema.parse(request.body);
     const user = request.currentUser!;
+    if (!user.courseId || !user.courseConfirmedAt) {
+      return reply.status(403).send({ error: { code: "COURSE_REQUIRED", message: "Conclua seu cadastro antes de criar um pedido." } });
+    }
+    if (!await prisma.course.findFirst({ where: { id: user.courseId, canPurchase: true } })) {
+      return reply.status(403).send({ error: { code: "COURSE_CANNOT_PURCHASE", message: "Seu curso nao esta habilitado para compras." } });
+    }
     const order = await prisma.$transaction(async (tx) => {
       const snapshots = await Promise.all(input.items.map(async (item) => {
         const product = await tx.product.findFirst({ where: { id: item.productId, ...saleWindow(), deletedAt: null } });
@@ -71,6 +77,9 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       const order = await tx.order.findUnique({ where: { publicId }, include: orderInclude });
       if (!order) return null;
       if (order.fulfillmentStatus === input.fulfillmentStatus) return order;
+      if (input.fulfillmentStatus !== "WAITING_PAYMENT" && order.paymentStatus !== "CONFIRMED") {
+        throw Object.assign(new Error("Somente pedidos pagos podem avancar no fluxo logistico."), { statusCode: 409 });
+      }
       const next = await tx.order.update({ where: { id: order.id }, data: { fulfillmentStatus: input.fulfillmentStatus }, include: orderInclude });
       await tx.orderStatusHistory.create({ data: { orderId: order.id, previousPaymentStatus: order.paymentStatus, newPaymentStatus: order.paymentStatus, previousFulfillmentStatus: order.fulfillmentStatus, newFulfillmentStatus: input.fulfillmentStatus, changedByUserId: request.currentUser!.id, source: "ADMIN", note: input.note ?? null } });
       await tx.auditLog.create({ data: { actorUserId: request.currentUser!.id, action: "ORDER_STATUS_UPDATED", entityType: "Order", entityId: order.id, metadata: { previousStatus: order.fulfillmentStatus, newStatus: input.fulfillmentStatus }, ...auditRequestContext(request) } });

@@ -26,7 +26,7 @@ function dueDate() {
 
 export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
   return async (app) => {
-    app.post("/checkout", { preHandler: requireAuthenticated }, async (request, reply) => {
+    app.post("/checkout", { preHandler: requireAuthenticated, config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (request, reply) => {
       const user = request.currentUser!;
       const rawKey = idempotencyHeader.parse(request.headers["idempotency-key"]);
       const idempotencyKey = hashToken(`${user.id}:${rawKey}`);

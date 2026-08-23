@@ -2,7 +2,8 @@
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
+import { ZodError } from "zod";
 import { config } from "./config.js";
 import { adminRoutes } from "./modules/admin/routes.js";
 import { createGoogleAuthProvider, type GoogleAuthProvider } from "./modules/auth/google.js";
@@ -27,6 +28,9 @@ export type BuildAppOptions = {
 };
 
 function getStatusCode(error: unknown) {
+  if (error instanceof ZodError) {
+    return 400;
+  }
   if (typeof error !== "object" || error === null || !("statusCode" in error)) {
     return 500;
   }
@@ -36,6 +40,9 @@ function getStatusCode(error: unknown) {
 }
 
 function getErrorMessage(error: unknown) {
+  if (error instanceof ZodError) {
+    return error.issues[0]?.message ?? "Dados invalidos.";
+  }
   if (error instanceof Error) {
     return error.message;
   }
@@ -55,12 +62,25 @@ export function buildApp(options: BuildAppOptions = {}) {
       redact: [
         "req.headers.authorization",
         "req.headers.cookie",
+        "req.headers.asaas-access-token",
+        "req.body.cpfCnpj",
+        "body.cpfCnpj",
         "GOOGLE_CLIENT_SECRET",
         "ASAAS_API_KEY",
         "ASAAS_WEBHOOK_TOKEN",
         "RESEND_API_KEY",
         "SESSION_SECRET"
-      ]
+      ],
+      serializers: {
+        req(request: FastifyRequest) {
+          return {
+            method: request.method,
+            url: request.url.split("?", 1)[0] ?? request.url,
+            host: request.hostname,
+            remoteAddress: request.ip
+          };
+        }
+      }
     },
     trustProxy: config.TRUST_PROXY
   });

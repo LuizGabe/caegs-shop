@@ -3,6 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "8.0.2"
+    }
+  },
   "scripts": {
     "dev": "pnpm --parallel --filter @ca/api --filter @ca/web dev",
     "build": "pnpm -r build",

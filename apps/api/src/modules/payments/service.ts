@@ -9,7 +9,9 @@ export const paymentInclude = {
   }
 } satisfies Prisma.PaymentInclude;
 
-export function paymentForApi(payment: any) {
+type PaymentForApiInput = Prisma.PaymentGetPayload<{ include: typeof paymentInclude }>;
+
+export function paymentForApi(payment: PaymentForApiInput) {
   return {
     id: payment.id,
     orderPublicId: payment.order.publicId,
