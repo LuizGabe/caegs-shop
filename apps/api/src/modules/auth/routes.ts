@@ -8,6 +8,7 @@ import { getCookieOptions, oauthNonceCookieName, oauthStateCookieName, sessionCo
 import type { GoogleAuthProvider } from "./google.js";
 import { buildGoogleAuthorizationUrl } from "./oauth.js";
 import { getAuthenticatedUser, requireAuthenticated } from "./guards.js";
+import { auditRequestContext } from "../../lib/audit.js";
 
 const callbackQuerySchema = z.object({
   code: z.string().min(1),
@@ -89,11 +90,22 @@ export function authRoutes(authProvider: GoogleAuthProvider): FastifyPluginAsync
       });
 
       const sessionToken = createRandomToken(48);
-      await prisma.session.create({
-        data: {
-          userId: user.id,
-          tokenHash: hashToken(sessionToken),
-          expiresAt: new Date(Date.now() + sessionDurationMs)
+      await prisma.$transaction(async (tx) => {
+        await tx.session.create({
+          data: {
+            userId: user.id,
+            tokenHash: hashToken(sessionToken),
+            expiresAt: new Date(Date.now() + sessionDurationMs)
+          }
+        });
+        if (user.role === "ADMIN") {
+          await tx.auditLog.create({ data: {
+            actorUserId: user.id,
+            action: "ADMIN_LOGIN",
+            entityType: "User",
+            entityId: user.id,
+            ...auditRequestContext(request)
+          } });
         }
       });
 

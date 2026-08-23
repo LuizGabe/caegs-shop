@@ -100,6 +100,12 @@ async function processAsaasWebhook(event: AsaasWebhook) {
           note: `Asaas: ${event.event}`
         }
       });
+      await tx.auditLog.create({ data: {
+        action: nextStatus === "CONFIRMED" ? "PAYMENT_CONFIRMED" : nextStatus === "REFUNDED" ? "PAYMENT_REFUNDED" : nextStatus === "REFUND_PENDING" ? "PAYMENT_REFUND_PENDING" : "PAYMENT_CANCELLED",
+        entityType: "Payment",
+        entityId: payment.id,
+        metadata: { provider: "ASAAS", providerEventId: event.id, previousStatus: payment.status, newStatus: nextStatus }
+      } });
     }
 
     await tx.webhookEvent.update({
