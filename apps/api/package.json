@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "@ca/api",
   "private": true,
   "version": "0.1.0",
@@ -9,7 +9,7 @@
     "start": "node dist/server.js",
     "lint": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run src/test"
   },
   "dependencies": {
     "@ca/shared": "workspace:*",

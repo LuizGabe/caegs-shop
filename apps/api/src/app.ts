@@ -1,4 +1,4 @@
-import cookie from "@fastify/cookie";
+﻿import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
@@ -9,6 +9,8 @@ import { createGoogleAuthProvider, type GoogleAuthProvider } from "./modules/aut
 import { authRoutes } from "./modules/auth/routes.js";
 import { courseRoutes } from "./modules/users/routes.js";
 import { prisma } from "./plugins/prisma.js";
+import { productRoutes } from "./modules/products/routes.js";
+import { orderRoutes } from "./modules/orders/routes.js";
 
 export type BuildAppOptions = {
   authProvider?: GoogleAuthProvider;
@@ -89,6 +91,8 @@ export function buildApp(options: BuildAppOptions = {}) {
   app.register(authRoutes(options.authProvider ?? createGoogleAuthProvider()));
   app.register(courseRoutes);
   app.register(adminRoutes);
+  app.register(productRoutes);
+  app.register(orderRoutes);
 
   app.setErrorHandler((error, _request, reply) => {
     const statusCode = getStatusCode(error);
