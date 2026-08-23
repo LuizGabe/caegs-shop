@@ -60,12 +60,10 @@ enum WebhookProcessingStatus {
 
 enum ProductionBatchStatus {
   DRAFT
-  SENT_TO_SUPPLIER
-  IN_PRODUCTION
+  SENT_TO_PRODUCTION
   RECEIVED
   READY_FOR_PICKUP
   CLOSED
-  CANCELLED
 }
 
 model User {
@@ -81,10 +79,11 @@ model User {
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
 
-  course    Course?    @relation(fields: [courseId], references: [id])
-  sessions  Session[]
-  orders    Order[]
-  auditLogs AuditLog[] @relation("AuditActor")
+  course            Course?           @relation(fields: [courseId], references: [id])
+  sessions          Session[]
+  orders            Order[]
+  auditLogs         AuditLog[]        @relation("AuditActor")
+  productionBatches ProductionBatch[] @relation("ProductionBatchCreator")
 
   @@index([deletedAt])
   @@index([courseId])
@@ -284,17 +283,24 @@ model OrderStatusHistory {
 }
 
 model ProductionBatch {
-  id             String                @id @default(cuid())
-  code           String                @unique
-  status         ProductionBatchStatus @default(DRAFT)
-  supplierNotes  String?
-  pickupLocation String?
-  pickupNotes    String?
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  deletedAt      DateTime?
+  id              String                @id @default(cuid())
+  code            String                @unique
+  name            String
+  status          ProductionBatchStatus @default(DRAFT)
+  notes           String?
+  pickupLocation  String?
+  pickupNotes     String?
+  createdByUserId String
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  closedAt        DateTime?
+  deletedAt       DateTime?
 
-  orders ProductionBatchOrder[]
+  createdBy User                   @relation("ProductionBatchCreator", fields: [createdByUserId], references: [id])
+  orders    ProductionBatchOrder[]
+
+  @@index([status, deletedAt, createdAt])
+  @@index([createdByUserId])
 }
 
 model ProductionBatchOrder {
@@ -306,6 +312,7 @@ model ProductionBatchOrder {
   order           Order           @relation(fields: [orderId], references: [id])
 
   @@id([productionBatchId, orderId])
+  @@unique([orderId])
 }
 
 model AppSetting {

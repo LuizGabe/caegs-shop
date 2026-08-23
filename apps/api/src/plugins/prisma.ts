@@ -1,6 +1,6 @@
 import { Prisma, PrismaClient } from "@prisma/client";
 
-const softDeleteModels = new Set(["User", "Course", "Product", "ProductVariant", "ProductImage", "Announcement"]);
+const softDeleteModels = new Set(["User", "Course", "Product", "ProductVariant", "ProductImage", "Announcement", "ProductionBatch"]);
 
 const softDeleteReadOperations = new Set(["findFirst", "findMany", "count"]);
 
