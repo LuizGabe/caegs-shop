@@ -69,7 +69,9 @@ function provider() {
       encodedImage: "base64-qr-code",
       payload: "000201010212PIX-COPIA-E-COLA",
       expirationDate: new Date(Date.now() + 3_600_000).toISOString()
-    }))
+    })),
+    deletePayment: vi.fn(async () => undefined),
+    refundPayment: vi.fn(async () => undefined)
   } satisfies PaymentProvider;
 }
 

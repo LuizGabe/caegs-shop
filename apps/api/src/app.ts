@@ -18,6 +18,7 @@ import { asaasWebhookRoutes } from "./modules/webhooks/asaas-routes.js";
 import { productionBatchRoutes } from "./modules/production-batches/routes.js";
 import { reportRoutes } from "./modules/reports/routes.js";
 import { createEmailService, type EmailService } from "./modules/email/service.js";
+import { cancellationRoutes } from "./modules/payments/cancellation-routes.js";
 
 export type BuildAppOptions = {
   authProvider?: GoogleAuthProvider;
@@ -48,6 +49,7 @@ function isUnsafeMethod(method: string) {
 
 export function buildApp(options: BuildAppOptions = {}) {
   const emailService = options.emailService ?? createEmailService();
+  const paymentProvider = options.paymentProvider ?? createAsaasPaymentProvider();
   const app = Fastify({
     logger: {
       redact: [
@@ -103,7 +105,8 @@ export function buildApp(options: BuildAppOptions = {}) {
   app.register(adminRoutes);
   app.register(productRoutes);
   app.register(orderRoutes);
-  app.register(paymentRoutes(options.paymentProvider ?? createAsaasPaymentProvider()));
+  app.register(paymentRoutes(paymentProvider));
+  app.register(cancellationRoutes(paymentProvider, emailService));
   app.register(asaasWebhookRoutes(emailService));
   app.register(productionBatchRoutes(emailService));
   app.register(reportRoutes);

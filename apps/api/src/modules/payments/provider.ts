@@ -28,4 +28,6 @@ export type PixQrCode = {
 export interface PaymentProvider {
   createPixPayment(input: CreatePixPaymentInput): Promise<PixPayment>;
   getPixQrCode(providerPaymentId: string): Promise<PixQrCode>;
+  deletePayment(providerPaymentId: string): Promise<void>;
+  refundPayment(providerPaymentId: string, description: string): Promise<void>;
 }

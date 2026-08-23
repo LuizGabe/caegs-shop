@@ -13,7 +13,7 @@ type AsaasPayment = { id: string; customer: string; status: string };
 export class PaymentProviderError extends Error {
   statusCode = 502;
 
-  constructor(message: string) {
+  constructor(message: string, readonly uncertain = false) {
     super(message);
     this.name = "PaymentProviderError";
   }
@@ -35,17 +35,22 @@ export class AsaasPaymentProvider implements PaymentProvider {
     if (!this.apiKey) {
       throw new PaymentProviderError("ASAAS_API_KEY nao configurada.");
     }
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...init,
-      signal: AbortSignal.timeout(12_000),
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        "user-agent": "CA-Engenharia-Software/0.1",
-        access_token: this.apiKey,
-        ...init.headers
-      }
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}${path}`, {
+        ...init,
+        signal: AbortSignal.timeout(12_000),
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          "user-agent": "CA-Engenharia-Software/0.1",
+          access_token: this.apiKey,
+          ...init.headers
+        }
+      });
+    } catch {
+      throw new PaymentProviderError("Nao foi possivel confirmar a operacao no Asaas.", true);
+    }
 
     const body = await response.json().catch(() => null) as unknown;
     if (!response.ok) {
@@ -133,6 +138,17 @@ export class AsaasPaymentProvider implements PaymentProvider {
 
   getPixQrCode(providerPaymentId: string) {
     return this.request<PixQrCode>(`/payments/${encodeURIComponent(providerPaymentId)}/pixQrCode`);
+  }
+
+  async deletePayment(providerPaymentId: string) {
+    await this.request(`/payments/${encodeURIComponent(providerPaymentId)}`, { method: "DELETE" });
+  }
+
+  async refundPayment(providerPaymentId: string, description: string) {
+    await this.request(`/payments/${encodeURIComponent(providerPaymentId)}/refund`, {
+      method: "POST",
+      body: JSON.stringify({ description })
+    });
   }
 }
 

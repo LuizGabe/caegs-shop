@@ -79,7 +79,11 @@ async function processAsaasWebhook(event: AsaasWebhook) {
     let notification: EmailNotification | null = null;
     if (nextStatus && nextStatus !== payment.status) {
       const now = new Date();
-      const nextFulfillment = nextStatus === "CONFIRMED" ? "PAID" : payment.order.fulfillmentStatus;
+      const nextFulfillment = nextStatus === "CONFIRMED"
+        ? "PAID"
+        : nextStatus === "REFUNDED" || nextStatus === "CANCELLED"
+          ? "CANCELLED"
+          : payment.order.fulfillmentStatus;
       await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -90,7 +94,12 @@ async function processAsaasWebhook(event: AsaasWebhook) {
       });
       await tx.order.update({
         where: { id: payment.orderId },
-        data: { paymentStatus: nextStatus, fulfillmentStatus: nextFulfillment }
+        data: {
+          paymentStatus: nextStatus,
+          fulfillmentStatus: nextFulfillment,
+          cancelledAt: nextFulfillment === "CANCELLED" ? payment.order.cancelledAt ?? now : payment.order.cancelledAt,
+          cancellationReason: nextFulfillment === "CANCELLED" ? payment.order.cancellationReason ?? "Cancelamento confirmado pelo Asaas." : payment.order.cancellationReason
+        }
       });
       await tx.orderStatusHistory.create({
         data: {
