@@ -11,6 +11,7 @@ export type EmailNotification = {
   to: string;
   name: string;
   orderPublicId: string;
+  orderHumanReadableId?: string | null;
   pickupLocation?: string | null;
   pickupNotes?: string | null;
   pickupDate?: string | null;
@@ -83,3 +84,4 @@ export function createEmailService() {
 function safeError(error: unknown) {
   return (error instanceof Error ? error.message : "Falha desconhecida no envio.").slice(0, 500);
 }
+

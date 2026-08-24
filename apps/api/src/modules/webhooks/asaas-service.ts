@@ -127,7 +127,8 @@ async function processAsaasWebhook(event: AsaasWebhook) {
           orderId: payment.order.id,
           to: payment.order.user.email,
           name: payment.order.user.name,
-          orderPublicId: payment.order.publicId
+          orderPublicId: payment.order.publicId,
+          orderHumanReadableId: payment.order.humanReadableId
         };
       }
     }
@@ -173,3 +174,4 @@ function errorMessageForStorage(error: unknown) {
     ? error.message.slice(0, 500)
     : "Falha tecnica durante o processamento do webhook.";
 }
+

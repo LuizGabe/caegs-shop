@@ -57,6 +57,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const key = z.object({ key: z.string() }).parse(request.params).key;
     const content = await storage.read(key);
     if (!content) return reply.status(404).send();
+    reply.header("Cross-Origin-Resource-Policy", "cross-origin");
     return reply.type(key.endsWith(".png") ? "image/png" : key.endsWith(".webp") ? "image/webp" : "image/jpeg").send(content);
   });
 
@@ -73,7 +74,7 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
   });
 
   app.get("/admin/products", { preHandler: requireAdmin }, async () => {
-    const products = await prisma.product.findMany({ include: productInclude, orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }] });
+    const products = await prisma.product.findMany({ include: productInclude, orderBy: [{ active: "desc" }, { displayOrder: "asc" }, { createdAt: "desc" }] });
     return { products: products.map((product) => productForApi(product, true)) };
   });
   app.get("/admin/products/:id", { preHandler: requireAdmin }, async (request, reply) => {
@@ -145,9 +146,28 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     if (!await prisma.product.findFirst({ where: { id: productId } })) return missing(reply);
     const data = variantBody.parse(request.body);
     const variant = await prisma.$transaction(async (tx) => {
-      const created = await tx.productVariant.create({ data: { productId, name: data.name, active: data.active ?? true, displayOrder: data.displayOrder ?? 0 } });
-      await tx.auditLog.create({ data: { actorUserId: request.currentUser!.id, action: "PRODUCT_VARIANT_CREATED", entityType: "ProductVariant", entityId: created.id, metadata: { productId }, ...auditRequestContext(request) } });
-      return created;
+      const activeVariant = await tx.productVariant.findFirst({ where: { productId, name: data.name } });
+      if (activeVariant) {
+        throw Object.assign(new Error("Essa variante ja existe para este produto."), { statusCode: 409 });
+      }
+      const removedVariant = await tx.productVariant.findFirst({ where: { productId, name: data.name, deletedAt: { not: null } } });
+      const saved = removedVariant
+        ? await tx.productVariant.update({
+            where: { id: removedVariant.id },
+            data: { active: data.active ?? true, deletedAt: null, displayOrder: data.displayOrder ?? removedVariant.displayOrder }
+          })
+        : await tx.productVariant.create({ data: { productId, name: data.name, active: data.active ?? true, displayOrder: data.displayOrder ?? 0 } });
+      await tx.auditLog.create({
+        data: {
+          actorUserId: request.currentUser!.id,
+          action: removedVariant ? "PRODUCT_VARIANT_RESTORED" : "PRODUCT_VARIANT_CREATED",
+          entityType: "ProductVariant",
+          entityId: saved.id,
+          metadata: { productId },
+          ...auditRequestContext(request)
+        }
+      });
+      return saved;
     });
     return { variant };
   });

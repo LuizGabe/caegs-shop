@@ -125,6 +125,7 @@ export function productionBatchRoutes(emailService: EmailService): FastifyPlugin
       ...(search ? {
         AND: [{ OR: [
           { publicId: { contains: search, mode: "insensitive" } },
+          { humanReadableId: { contains: search, mode: "insensitive" } },
           { user: { name: { contains: search, mode: "insensitive" } } },
           { user: { email: { contains: search, mode: "insensitive" } } }
         ] }]
@@ -272,7 +273,7 @@ async function notifyBatchOrders(emailService: EmailService, type: EmailNotifica
   pickupNotes: string | null;
   pickupDate: Date | null;
   pickupTime: Date | null;
-  orders: Array<{ order: { id: string; publicId: string; user: { id: string; name: string; email: string } } }>;
+  orders: Array<{ order: { id: string; publicId: string; humanReadableId: string; user: { id: string; name: string; email: string } } }>;
 }) {
   await Promise.all(batch.orders.map(({ order }) => emailService.notify({
     type,
@@ -282,6 +283,7 @@ async function notifyBatchOrders(emailService: EmailService, type: EmailNotifica
     to: order.user.email,
     name: order.user.name,
     orderPublicId: order.publicId,
+    orderHumanReadableId: order.humanReadableId,
     pickupLocation: batch.pickupLocation,
     pickupNotes: batch.pickupNotes,
     pickupDate: batch.pickupDate?.toISOString().slice(0, 10) ?? null,
@@ -309,3 +311,5 @@ async function updateOrderStatuses(tx: Pick<typeof prisma, "order" | "orderStatu
     });
   }
 }
+
+

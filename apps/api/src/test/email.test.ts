@@ -21,7 +21,8 @@ function notification(deduplicationKey: string) {
     orderId: "email-test-order",
     to: "user@sou.unijui.edu.br",
     name: "Usuario Teste",
-    orderPublicId: "ORDER-TEST"
+    orderPublicId: "ORDER-TEST",
+    orderHumanReadableId: "0001.2026"
   };
 }
 
@@ -51,9 +52,13 @@ describe("email service", () => {
   });
 
   it("escapes dynamic HTML in templates", () => {
-    const rendered = renderEmail({ type: "ORDER_READY_FOR_PICKUP", name: "<script>alert(1)</script>", orderPublicId: "ORDER-1", pickupLocation: "Sala <b>1</b>" });
+    const rendered = renderEmail({ type: "ORDER_READY_FOR_PICKUP", name: "<script>alert(1)</script>", orderPublicId: "ORDER-1", orderHumanReadableId: "0001.2026", pickupLocation: "Sala <b>1</b>" });
     expect(rendered.html).not.toContain("<script>");
     expect(rendered.html).not.toContain("<b>1</b>");
     expect(rendered.html).toContain("&lt;script&gt;");
+    expect(rendered.html).toContain("#0001.2026");
+    expect(rendered.html).toContain("Referência técnica: ORDER-1");
+    expect(rendered.html).toContain("Centro Acadêmico de Engenharia de Software");
   });
 });
+

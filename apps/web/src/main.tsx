@@ -1,27 +1,212 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ShoppingBag } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ShoppingBag, User as UserIcon, Shield, PackageCheck, Store } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Link, Route, Routes } from "react-router";
+import { BrowserRouter, Link, Route, Routes, Navigate, useLocation } from "react-router";
 import { AdminPage } from "./admin";
-import { readCart } from "./lib";
-import { CartPage, CatalogPage, HomePage, PaymentPage, ProductPage } from "./storefront";
-import { ProductionBatchesPage } from "./production-batches";
-import { OrdersPage } from "./orders";
+import { AdminUsersPage } from "./admin-users";
 import { DashboardPage } from "./dashboard";
+import { readCart, useAuth } from "./lib";
+import { OrdersPage } from "./orders";
+import { OnboardingPage } from "./pages/OnboardingPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { WelcomePage } from "./pages/WelcomePage";
+import { ProductionBatchesPage } from "./production-batches";
+import { CartPage, CatalogPage, HomePage, PaymentPage, ProductPage } from "./storefront";
+import { Skeleton } from "./components/ui/Skeleton";
+import { Badge } from "./components/ui/Badge";
+import { Avatar } from "./components/ui/Avatar";
 import "./styles.css";
 
 const queryClient = new QueryClient();
 
 function Shell() {
-  const [cartCount, setCartCount] = useState(() => readCart().reduce((sum, item) => sum + item.quantity, 0));
+  const { data: authData, isLoading: isAuthLoading } = useAuth();
+  const [cartCount, setCartCount] = useState(() =>
+    readCart().reduce((sum, item) => sum + item.quantity, 0)
+  );
+
   useEffect(() => {
-    const update = () => setCartCount(readCart().reduce((sum, item) => sum + item.quantity, 0));
+    const update = () =>
+      setCartCount(readCart().reduce((sum, item) => sum + item.quantity, 0));
     window.addEventListener("cart-updated", update);
     window.addEventListener("storage", update);
-    return () => { window.removeEventListener("cart-updated", update); window.removeEventListener("storage", update); };
+    return () => {
+      window.removeEventListener("cart-updated", update);
+      window.removeEventListener("storage", update);
+    };
   }, []);
-  return <div className="min-h-screen bg-background text-foreground"><header className="border-b border-border bg-white"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4"><Link to="/" className="font-semibold">CA Engenharia de Software</Link><nav className="flex flex-wrap items-center justify-end gap-x-5 gap-y-2 text-sm text-muted-foreground"><Link to="/products">Produtos</Link><Link to="/orders">Meus pedidos</Link><Link to="/admin">Dashboard</Link><Link to="/admin/production-batches">Lotes</Link><Link to="/cart" aria-label={`Carrinho com ${cartCount} itens`} className="relative"><ShoppingBag size={20} />{cartCount > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-white">{cartCount}</span>}</Link></nav></div></header><main className="mx-auto max-w-6xl px-4 py-8"><Routes><Route path="/" element={<HomePage />} /><Route path="/products" element={<CatalogPage />} /><Route path="/products/:slug" element={<ProductPage />} /><Route path="/orders" element={<OrdersPage />} /><Route path="/cart" element={<CartPage />} /><Route path="/checkout/:publicId" element={<PaymentPage />} /><Route path="/admin" element={<DashboardPage />} /><Route path="/admin/products" element={<AdminPage />} /><Route path="/admin/production-batches" element={<ProductionBatchesPage />} /><Route path="*" element={<h1 className="text-3xl font-semibold">Pagina nao encontrada</h1>} /></Routes></main></div>;
+
+  const user = authData?.user;
+
+  // 1. Loading state during auth check
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-sm w-full">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white shadow-sm ring-1 ring-blue-100 animate-pulse overflow-hidden p-0">
+            <img src="/logo-CAES.png" alt="CAES" className="h-full w-full scale-[1.35] object-cover" />
+          </div>
+          <Skeleton className="h-6 w-48 mx-auto" />
+          <Skeleton className="h-4 w-32 mx-auto" />
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Unauthenticated User Flow
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+        <main className="flex-1 mx-auto max-w-6xl w-full px-4">
+          <Routes>
+            <Route path="*" element={<WelcomePage />} />
+          </Routes>
+        </main>
+      </div>
+    );
+  }
+
+  // 3. Authenticated without course flow (Onboarding)
+  if (user.needsProfileCompletion || !user.courseId) {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+        <main className="flex-1 mx-auto max-w-6xl w-full px-4">
+          <Routes>
+            <Route path="*" element={<OnboardingPage />} />
+          </Routes>
+        </main>
+      </div>
+    );
+  }
+
+  // 4. Authenticated with complete profile (Main Application)
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      {/* Sticky Glassmorphism Header */}
+      <header className="sticky top-0 z-40 glass-nav">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="w-10 h-10 rounded-xl bg-white border border-blue-100 overflow-hidden p-0 shadow-xs flex items-center justify-center group-hover:scale-105 transition-transform">
+              <img src="/logo-CAES.png" alt="CAES" className="h-full w-full scale-[1.35] object-cover" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="font-bold text-slate-900 text-sm block leading-tight">CAES</span>
+              <span className="text-[10px] text-slate-500 font-medium block">Engenharia de Software</span>
+            </div>
+          </Link>
+
+          {/* Navigation Links */}
+          <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium text-slate-600">
+            <NavLink to="/products" icon={<Store size={16} />}>
+              Produtos
+            </NavLink>
+
+            <NavLink to="/orders" icon={<PackageCheck size={16} />}>
+              Meus Pedidos
+            </NavLink>
+
+            {/* MANDATORY: Render Admin Link IF AND ONLY IF user.role === 'ADMIN' */}
+            {user.role === "ADMIN" && (
+              <NavLink to="/admin" icon={<Shield size={16} className="text-indigo-600" />}>
+                Administração
+              </NavLink>
+            )}
+
+            <NavLink to="/cart" className="relative p-2" ariaLabel={`Carrinho com ${cartCount} itens`}>
+              <ShoppingBag size={20} className="text-slate-700" />
+              {cartCount > 0 && (
+                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow-xs">
+                  {cartCount}
+                </span>
+              )}
+            </NavLink>
+
+            <Link to="/profile" className="ml-1 sm:ml-2 pl-2 border-l border-slate-200 flex items-center gap-2" title="Meu Perfil">
+              <Avatar src={user.avatarUrl} name={user.name} size="sm" />
+            </Link>
+          </nav>
+        </div>
+      </header>
+
+      {/* Main Content Area */}
+      <main className="flex-1 mx-auto max-w-6xl w-full px-4 py-6 sm:py-8">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/products" element={<CatalogPage />} />
+          <Route path="/products/:slug" element={<ProductPage />} />
+          <Route path="/orders" element={<OrdersPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout/:publicId" element={<PaymentPage />} />
+
+          {/* Admin Routes strictly protected on client side */}
+          {user.role === "ADMIN" ? (
+            <>
+              <Route path="/admin" element={<DashboardPage />} />
+              <Route path="/admin/products" element={<AdminPage />} />
+              <Route path="/admin/users" element={<AdminUsersPage />} />
+              <Route path="/admin/production-batches" element={<ProductionBatchesPage />} />
+            </>
+          ) : (
+            <Route path="/admin/*" element={<Navigate to="/" replace />} />
+          )}
+
+          <Route
+            path="*"
+            element={
+              <div className="py-12 text-center">
+                <h1 className="text-2xl font-bold text-slate-900">Página não encontrada</h1>
+                <p className="text-xs text-slate-500 mt-2">A página solicitada não existe ou foi movida.</p>
+                <Link to="/" className="mt-4 inline-block text-xs font-semibold text-blue-700 underline">
+                  Voltar para a página inicial
+                </Link>
+              </div>
+            }
+          />
+        </Routes>
+      </main>
+    </div>
+  );
 }
 
-createRoot(document.getElementById("root") as HTMLElement).render(<QueryClientProvider client={queryClient}><BrowserRouter><Shell /></BrowserRouter></QueryClientProvider>);
+function NavLink({
+  to,
+  children,
+  icon,
+  className = "",
+  ariaLabel
+}: {
+  to: string;
+  children?: React.ReactNode;
+  icon?: React.ReactNode;
+  className?: string;
+  ariaLabel?: string;
+}) {
+  const location = useLocation();
+  const isActive = location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
+
+  return (
+    <Link
+      to={to}
+      aria-label={ariaLabel}
+      className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 font-medium ${
+        isActive
+          ? "bg-slate-200/70 text-slate-900 font-semibold"
+          : "hover:bg-slate-100/80 text-slate-600 hover:text-slate-900"
+      } ${className}`}
+    >
+      {icon}
+      {children}
+    </Link>
+  );
+}
+
+createRoot(document.getElementById("root") as HTMLElement).render(
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <Shell />
+    </BrowserRouter>
+  </QueryClientProvider>
+);
+

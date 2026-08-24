@@ -1,4 +1,4 @@
-﻿import { readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -19,6 +19,8 @@ describe("product catalogue administration", () => {
     expect(created.statusCode).toBe(200); const product = created.json().product;
     const edited = await app.inject({ method: "PATCH", url: `/admin/products/${product.id}`, headers, payload: { salePrice: 80, featured: true } }); expect(edited.statusCode).toBe(200); expect(edited.json().product.salePrice).toBe(80);
     const variant = await app.inject({ method: "POST", url: `/admin/products/${product.id}/variants`, headers, payload: { name: "M", displayOrder: 1 } }); expect(variant.statusCode).toBe(200);
+    const removedVariant = await app.inject({ method: "DELETE", url: `/admin/products/${product.id}/variants/${variant.json().variant.id}`, headers }); expect(removedVariant.statusCode).toBe(204);
+    const restoredVariant = await app.inject({ method: "POST", url: `/admin/products/${product.id}/variants`, headers, payload: { name: "M", displayOrder: 1 } }); expect(restoredVariant.statusCode).toBe(200); expect(restoredVariant.json().variant.id).toBe(variant.json().variant.id); expect(restoredVariant.json().variant.deletedAt).toBeNull();
     const disabled = await app.inject({ method: "PATCH", url: `/admin/products/${product.id}/variants/${variant.json().variant.id}`, headers, payload: { active: false } }); expect(disabled.json().variant.active).toBe(false);
     for (const type of ["PRODUCT", "SIZE_GUIDE"]) { const image = await app.inject({ method: "POST", url: `/admin/products/${product.id}/images`, headers, payload: { type, altText: `Imagem ${type}`, fileName: "foto.jpg", mimeType: "image/jpeg", contentBase64: jpeg } }); expect(image.statusCode).toBe(200); }
     const publicProduct = await app.inject({ method: "GET", url: `/products/${product.slug}` }); expect(publicProduct.statusCode).toBe(200); expect(publicProduct.json().product.costPrice).toBeUndefined(); expect(publicProduct.json().product.variants).toHaveLength(0); expect(publicProduct.json().product.images).toHaveLength(2);

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { hashToken } from "../../lib/crypto.js";
 import { prisma } from "../../plugins/prisma.js";
 import { requireAuthenticated } from "../auth/guards.js";
-import { createOrderSchema, createPublicOrderId, orderForApi, orderInclude } from "../orders/service.js";
+import { createHumanReadableOrderFields, createOrderSchema, createPublicOrderId, orderForApi, orderInclude } from "../orders/service.js";
 import type { PaymentProvider } from "./provider.js";
 import { paymentForApi, paymentInclude } from "./service.js";
 
@@ -72,9 +72,11 @@ export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
               };
             }));
             const total = snapshots.reduce((sum, item) => sum.add(item.totalPrice), new Prisma.Decimal(0));
+            const orderIdentity = await createHumanReadableOrderFields(tx);
             const order = await tx.order.create({
               data: {
                 publicId: createPublicOrderId(),
+                ...orderIdentity,
                 userId: user.id,
                 subtotal: total,
                 total,
@@ -139,7 +141,7 @@ async function ensurePixData(provider: PaymentProvider, paymentId: string, cpfCn
         externalReference: payment.id,
         customer: { ...payment.order.user, cpfCnpj },
         amount: Number(payment.amount),
-        description: `Pedido ${payment.order.publicId}`,
+        description: `Pedido #${payment.order.humanReadableId}`,
         dueDate: dueDate()
       });
       payment = await tx.payment.update({
@@ -187,3 +189,7 @@ function isValidCpfCnpj(value: string) {
   }
   return true;
 }
+
+
+
+

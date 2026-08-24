@@ -11,6 +11,10 @@ for (const line of env.split(/\r?\n/)) {
 const { buildApp } = await import("../app.js");
 const { prisma } = await import("../plugins/prisma.js");
 const { createRandomToken, hashToken } = await import("../lib/crypto.js");
+function humanOrderFields(suffix = createRandomToken(8), offset = 0) {
+  const orderNumber = (Number.parseInt(suffix.slice(0, 6), 36) % 900000) + offset;
+  return { orderYear: 2026, orderNumber, humanReadableId: `${orderNumber.toString().padStart(4, "0")}.2026` };
+}
 
 async function session(role: "USER" | "ADMIN", userId?: string) {
   const token = createRandomToken(48);
@@ -50,6 +54,7 @@ describe("administrative reports", () => {
     }, include: { variants: true } });
     const confirmedOrder = await prisma.order.create({ data: {
       publicId: createRandomToken(18),
+      ...humanOrderFields(suffix, 1),
       userId: buyer.id,
       paymentStatus: "CONFIRMED",
       fulfillmentStatus: "IN_PRODUCTION",
@@ -60,6 +65,7 @@ describe("administrative reports", () => {
     } });
     await prisma.order.create({ data: {
       publicId: createRandomToken(18),
+      ...humanOrderFields(suffix, 2),
       userId: buyer.id,
       paymentStatus: "PENDING",
       fulfillmentStatus: "WAITING_PAYMENT",
@@ -77,6 +83,7 @@ describe("administrative reports", () => {
     }, include: { variants: true } });
     await prisma.order.create({ data: {
       publicId: createRandomToken(18),
+      ...humanOrderFields(suffix, 3),
       userId: buyer.id,
       paymentStatus: "CONFIRMED",
       fulfillmentStatus: "PAID",
@@ -95,6 +102,7 @@ describe("administrative reports", () => {
     }, include: { variants: true } });
     await prisma.order.create({ data: {
       publicId: createRandomToken(18),
+      ...humanOrderFields(suffix, 4),
       userId: buyer.id,
       paymentStatus: "REFUNDED",
       fulfillmentStatus: "IN_PRODUCTION",
@@ -142,3 +150,7 @@ describe("administrative reports", () => {
     await app.close();
   });
 });
+
+
+
+

@@ -91,10 +91,19 @@ describe("PIX checkout", () => {
 
     const first = await app.inject(request);
     const second = await app.inject(request);
+    const third = await app.inject({ ...request, headers: { ...request.headers, "idempotency-key": createRandomToken(24) } });
 
     expect(first.statusCode).toBe(201);
     expect(second.statusCode).toBe(201);
+    expect(third.statusCode).toBe(201);
     expect(second.json().order.publicId).toBe(first.json().order.publicId);
+    expect(first.json().order.humanReadableId).toMatch(/^\d{4,}\.\d{4}$/);
+    expect(second.json().order.humanReadableId).toBe(first.json().order.humanReadableId);
+    expect(second.json().payment.orderHumanReadableId).toBe(first.json().order.humanReadableId);
+    const [firstNumber, firstYear] = first.json().order.humanReadableId.split(".").map(Number);
+    const [thirdNumber, thirdYear] = third.json().order.humanReadableId.split(".").map(Number);
+    expect(thirdYear).toBe(firstYear);
+    expect(thirdNumber).toBeGreaterThan(firstNumber);
     expect(second.json().payment.id).toBe(first.json().payment.id);
     expect(first.json().payment).toMatchObject({
       method: "PIX",
@@ -104,8 +113,8 @@ describe("PIX checkout", () => {
       pixQrCodeImage: "base64-qr-code",
       pixCopyPasteCode: "000201010212PIX-COPIA-E-COLA"
     });
-    expect(paymentProvider.createPixPayment).toHaveBeenCalledTimes(1);
-    expect(paymentProvider.getPixQrCode).toHaveBeenCalledTimes(1);
+    expect(paymentProvider.createPixPayment).toHaveBeenCalledTimes(2);
+    expect(paymentProvider.getPixQrCode).toHaveBeenCalledTimes(2);
     await app.close();
   });
 
@@ -126,3 +135,9 @@ describe("PIX checkout", () => {
   });
 
 });
+
+
+
+
+
+

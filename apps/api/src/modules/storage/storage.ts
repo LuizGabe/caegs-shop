@@ -1,4 +1,4 @@
-﻿import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 
@@ -14,7 +14,7 @@ function fileMatchesMimeType(buffer: Buffer, mimeType: string) {
   return false;
 }
 export class LocalStorageService implements StorageService {
-  constructor(private readonly root = join(process.cwd(), "uploads")) {}
+  constructor(private readonly root = process.env.UPLOADS_DIR ?? join(process.cwd(), "uploads")) {}
   async upload(input: UploadInput): Promise<StoredFile> {
     const extension = acceptedTypes.get(input.mimeType);
     const fileExtension = extname(input.fileName).toLowerCase();
@@ -25,6 +25,6 @@ export class LocalStorageService implements StorageService {
     await mkdir(this.root, { recursive: true }); await writeFile(join(this.root, key), content, { flag: "wx" });
     return { key, url: `/uploads/${key}` };
   }
-  async read(key: string) { if (!/^[a-z0-9-]+\.(jpg|png|webp)$/i.test(key)) return null; try { return await readFile(join(this.root, key)); } catch { return null; } }
+  async read(key: string) { if (!/^[a-z0-9-]+\.(jpg|jpeg|png|webp)$/i.test(key)) return null; try { return await readFile(join(this.root, key)); } catch { return null; } }
 }
 export const storage = new LocalStorageService();

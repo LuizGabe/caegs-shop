@@ -77,6 +77,9 @@ export function batchForApi(batch: BatchForApiInput, auditLogs: AuditLog[] = [])
     orders: batch.orders.map(({ order, createdAt }) => ({
       id: order.id,
       publicId: order.publicId,
+      humanReadableId: order.humanReadableId,
+      orderNumber: order.orderNumber,
+      orderYear: order.orderYear,
       user: order.user,
       total: Number(order.total),
       paymentStatus: order.paymentStatus,
@@ -93,3 +96,4 @@ export function batchForApi(batch: BatchForApiInput, auditLogs: AuditLog[] = [])
     auditLogs
   };
 }
+

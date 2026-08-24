@@ -1,3 +1,5 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 export const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3333";
 
 export class ApiError extends Error {
@@ -18,7 +20,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const body = response.status === 204 ? null : await response.json().catch(() => null);
   if (!response.ok) {
     throw new ApiError(
-      body?.error?.message ?? "Nao foi possivel concluir a operacao.",
+      body?.error?.message ?? "Não foi possível concluir a operação.",
       response.status,
       body?.error?.code
     );
@@ -32,7 +34,7 @@ export async function downloadCsv(path: string, filename: string) {
   const response = await fetch(`${apiUrl}${path}`, { credentials: "include" });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
-    throw new ApiError(body?.error?.message ?? "Nao foi possivel exportar o relatorio.", response.status, body?.error?.code);
+    throw new ApiError(body?.error?.message ?? "Não foi possível exportar o relatório.", response.status, body?.error?.code);
   }
   const url = URL.createObjectURL(await response.blob());
   const anchor = document.createElement("a");
@@ -42,6 +44,72 @@ export async function downloadCsv(path: string, filename: string) {
   anchor.click();
   anchor.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+export type UserRole = "USER" | "ADMIN";
+
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  role: UserRole;
+  courseId?: string | null;
+  courseConfirmedAt?: string | null;
+  needsProfileCompletion: boolean;
+};
+
+export type Course = {
+  id: string;
+  name: string;
+  slug: string;
+  canPurchase: boolean;
+};
+
+export type AdminUser = AuthUser & {
+  createdAt: string;
+  course: Course | null;
+};
+
+export function useAuth() {
+  return useQuery({
+    queryKey: ["auth-me"],
+    queryFn: () => request<{ user: AuthUser | null }>("/auth/me"),
+    staleTime: 1000 * 60 * 5
+  });
+}
+
+export function useCourses() {
+  return useQuery({
+    queryKey: ["courses"],
+    queryFn: () => request<{ courses: Course[] }>("/courses")
+  });
+}
+
+export function useLogout() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
+    onSuccess: () => {
+      queryClient.setQueryData(["auth-me"], { user: null });
+      queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+    }
+  });
+}
+
+export function useCompleteProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (courseId: string) =>
+      request<{ user: AuthUser; course: Course }>("/profile/complete", {
+        method: "POST",
+        body: JSON.stringify({ courseId })
+      }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["auth-me"], { user: data.user });
+      queryClient.invalidateQueries({ queryKey: ["auth-me"] });
+    }
+  });
 }
 
 export type Variant = { id: string; name: string; active: boolean; displayOrder: number };

@@ -11,6 +11,10 @@ for (const line of env.split(/\r?\n/)) {
 const { buildApp } = await import("../app.js");
 const { prisma } = await import("../plugins/prisma.js");
 const { createRandomToken, hashToken } = await import("../lib/crypto.js");
+function humanOrderFields(suffix = createRandomToken(8), offset = 0) {
+  const orderNumber = (Number.parseInt(suffix.slice(0, 6), 36) % 900000) + offset;
+  return { orderYear: 2026, orderNumber, humanReadableId: `${orderNumber.toString().padStart(4, "0")}.2026` };
+}
 
 async function adminSession() {
   const token = createRandomToken(48);
@@ -78,6 +82,7 @@ async function order(fixture: Awaited<ReturnType<typeof catalogFixture>>, quanti
   return prisma.order.create({
     data: {
       publicId: createRandomToken(18),
+      ...humanOrderFields(),
       userId: fixture.buyer.id,
       paymentStatus: paid ? "CONFIRMED" : "PENDING",
       fulfillmentStatus: paid ? "PAID" : "WAITING_PAYMENT",
@@ -216,3 +221,6 @@ describe("production batches", () => {
     await app.close();
   });
 });
+
+
+

@@ -11,3 +11,7 @@ coverage/
 Dockerfile.local
 *.tsbuildinfo
 apps/api/uploads/
+.agents
+.cache
+uploads/
+testes_imagens/

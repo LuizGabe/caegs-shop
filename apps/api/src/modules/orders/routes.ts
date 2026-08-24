@@ -4,7 +4,7 @@ import { z } from "zod";
 import { auditRequestContext } from "../../lib/audit.js";
 import { prisma } from "../../plugins/prisma.js";
 import { requireAdmin, requireAuthenticated } from "../auth/guards.js";
-import { createOrderSchema, createPublicOrderId, orderForApi, orderInclude, statusUpdateSchema } from "./service.js";
+import { createHumanReadableOrderFields, createOrderSchema, createPublicOrderId, orderForApi, orderInclude, statusUpdateSchema } from "./service.js";
 
 const publicIdSchema = z.object({ publicId: z.string().min(10).max(100) });
 const paginationSchema = z.object({ page: z.coerce.number().int().positive().default(1), pageSize: z.coerce.number().int().min(1).max(100).default(20) });
@@ -39,8 +39,9 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
         return { productId: product.id, productVariantId: variant.id, productNameSnapshot: product.name, variantNameSnapshot: variant.name, unitPrice: product.salePrice, quantity: item.quantity, totalPrice: product.salePrice.mul(item.quantity) };
       }));
       const total = snapshots.reduce((sum, item) => sum.add(item.totalPrice), new Prisma.Decimal(0));
+      const orderIdentity = await createHumanReadableOrderFields(tx);
       return tx.order.create({
-        data: { publicId: createPublicOrderId(), userId: user.id, subtotal: total, total, items: { create: snapshots }, statusHistory: { create: { newPaymentStatus: "PENDING", newFulfillmentStatus: "WAITING_PAYMENT", source: "SYSTEM", note: "Pedido criado." } } },
+        data: { publicId: createPublicOrderId(), ...orderIdentity, userId: user.id, subtotal: total, total, items: { create: snapshots }, statusHistory: { create: { newPaymentStatus: "PENDING", newFulfillmentStatus: "WAITING_PAYMENT", source: "SYSTEM", note: "Pedido criado." } } },
         include: orderInclude
       });
     });
@@ -115,3 +116,6 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     return updated ? { order: orderForApi(updated) } : notFound(reply);
   });
 };
+
+
+

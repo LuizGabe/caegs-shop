@@ -41,6 +41,33 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
     return { enabled };
   });
 
+
+  app.get("/admin/users", { preHandler: requireAdmin }, async () => {
+    const users = await prisma.user.findMany({
+      where: { deletedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatarUrl: true,
+        role: true,
+        courseId: true,
+        courseConfirmedAt: true,
+        createdAt: true,
+        course: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            canPurchase: true
+          }
+        }
+      }
+    });
+
+    return { users };
+  });
   app.patch("/admin/users/:userId/course", { preHandler: requireAdmin }, async (request, reply) => {
     const actorUser = request.currentUser;
 

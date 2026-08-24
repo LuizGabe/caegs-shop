@@ -13,6 +13,10 @@ for (const line of env.split(/\r?\n/)) {
 const { buildApp } = await import("../app.js");
 const { prisma } = await import("../plugins/prisma.js");
 const { createRandomToken } = await import("../lib/crypto.js");
+function humanOrderFields(suffix = createRandomToken(8), offset = 0) {
+  const orderNumber = (Number.parseInt(suffix.slice(0, 6), 36) % 900000) + offset;
+  return { orderYear: 2026, orderNumber, humanReadableId: `${orderNumber.toString().padStart(4, "0")}.2026` };
+}
 
 async function pendingPayment(amount = 49.9) {
   const suffix = createRandomToken(8);
@@ -26,6 +30,7 @@ async function pendingPayment(amount = 49.9) {
   const order = await prisma.order.create({
     data: {
       publicId: createRandomToken(18),
+      ...humanOrderFields(suffix),
       userId: user.id,
       subtotal: amount,
       total: amount
@@ -123,3 +128,6 @@ describe("Asaas webhooks", () => {
     await app.close();
   });
 });
+
+
+

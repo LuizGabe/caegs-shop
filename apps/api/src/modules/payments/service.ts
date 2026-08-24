@@ -15,6 +15,9 @@ export function paymentForApi(payment: PaymentForApiInput) {
   return {
     id: payment.id,
     orderPublicId: payment.order.publicId,
+    orderHumanReadableId: payment.order.humanReadableId,
+    orderNumber: payment.order.orderNumber,
+    orderYear: payment.order.orderYear,
     provider: payment.provider,
     method: payment.method,
     status: payment.status,
@@ -27,3 +30,4 @@ export function paymentForApi(payment: PaymentForApiInput) {
     refundedAt: payment.refundedAt
   };
 }
+

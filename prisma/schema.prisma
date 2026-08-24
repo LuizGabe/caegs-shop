@@ -195,6 +195,9 @@ model Announcement {
 model Order {
   id                 String                 @id @default(cuid())
   publicId           String                 @unique
+  humanReadableId    String                 @unique
+  orderNumber        Int
+  orderYear          Int
   userId             String
   paymentStatus      PaymentStatus          @default(PENDING)
   fulfillmentStatus  OrderFulfillmentStatus @default(WAITING_PAYMENT)
@@ -211,6 +214,9 @@ model Order {
   payments              Payment[]
   statusHistory         OrderStatusHistory[]
   productionBatchOrders ProductionBatchOrder[]
+
+  @@unique([orderYear, orderNumber])
+  @@index([orderYear, orderNumber])
 }
 
 model OrderItem {
@@ -353,3 +359,6 @@ model AuditLog {
 
   actor User? @relation("AuditActor", fields: [actorUserId], references: [id])
 }
+
+
+

@@ -11,6 +11,10 @@ for (const line of env.split(/\r?\n/)) {
 const { buildApp } = await import("../app.js");
 const { prisma } = await import("../plugins/prisma.js");
 const { createRandomToken, hashToken } = await import("../lib/crypto.js");
+function humanOrderFields(suffix = createRandomToken(8), offset = 0) {
+  const orderNumber = (Number.parseInt(suffix.slice(0, 6), 36) % 900000) + offset;
+  return { orderYear: 2026, orderNumber, humanReadableId: `${orderNumber.toString().padStart(4, "0")}.2026` };
+}
 const { PaymentProviderError } = await import("../modules/payments/asaas.js");
 import type { EmailService } from "../modules/email/service.js";
 import type { PaymentProvider } from "../modules/payments/provider.js";
@@ -47,6 +51,7 @@ async function order(paymentStatus: "PENDING" | "CONFIRMED") {
   return prisma.order.create({
     data: {
       publicId: `CANCEL-${suffix}`,
+      ...humanOrderFields(suffix),
       userId: buyer.user.id,
       paymentStatus,
       fulfillmentStatus: paymentStatus === "CONFIRMED" ? "PAID" : "WAITING_PAYMENT",
@@ -127,3 +132,6 @@ describe("admin order cancellation", () => {
     await app.close();
   });
 });
+
+
+

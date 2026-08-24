@@ -63,6 +63,8 @@ export const reportRoutes: FastifyPluginAsync = async (app) => {
       order.createdAt.toISOString()
     ]));
     await prisma.auditLog.create({ data: { ...auditContext(request), action: "ORDERS_CSV_EXPORTED", entityType: "OrderReport" } });
-    return sendCsv(reply, `pedidos-${new Date().toISOString().slice(0, 10)}.csv`, createCsv(["Pedido", "Nome", "Email", "Curso", "Produto", "Tamanho", "Quantidade", "Valor", "Status do pagamento", "Status logistico", "Lote", "Data"], rows));
+    return sendCsv(reply, `pedidos-${new Date().toISOString().slice(0, 10)}.csv`, createCsv(["Pedido", "Referencia tecnica", "Nome", "Email", "Curso", "Produto", "Tamanho", "Quantidade", "Valor", "Status do pagamento", "Status logistico", "Lote", "Data"], rows));
   });
 };
+
+

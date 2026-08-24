@@ -16,7 +16,7 @@ type CancellationClaim = {
   paymentId: string | null;
   providerPaymentId: string | null;
   previousPaymentStatus: PaymentStatus;
-  order: { id: string; publicId: string; user: { id: string; name: string; email: string } };
+  order: { id: string; publicId: string; humanReadableId: string; user: { id: string; name: string; email: string } };
 };
 
 export function cancellationRoutes(provider: PaymentProvider, emailService: EmailService): FastifyPluginAsync {
@@ -55,7 +55,8 @@ export function cancellationRoutes(provider: PaymentProvider, emailService: Emai
         orderId: claim.order.id,
         to: claim.order.user.email,
         name: claim.order.user.name,
-        orderPublicId: claim.order.publicId
+        orderPublicId: claim.order.publicId,
+        orderHumanReadableId: claim.order.humanReadableId
       });
 
       return { status: "CANCELLED", paymentStatus };
@@ -79,7 +80,7 @@ async function claimCancellation(publicId: string, actorUserId: string, reason: 
         paymentId: payment?.id ?? null,
         providerPaymentId: null,
         previousPaymentStatus: payment?.status ?? order.paymentStatus,
-        order: { id: order.id, publicId: order.publicId, user: order.user }
+        order: { id: order.id, publicId: order.publicId, humanReadableId: order.humanReadableId, user: order.user }
       };
     }
     if (payment.status === "REFUND_PENDING") return "IN_PROGRESS";
@@ -106,7 +107,7 @@ async function claimCancellation(publicId: string, actorUserId: string, reason: 
       paymentId: payment.id,
       providerPaymentId: payment.providerPaymentId,
       previousPaymentStatus: payment.status,
-      order: { id: order.id, publicId: order.publicId, user: order.user }
+      order: { id: order.id, publicId: order.publicId, humanReadableId: order.humanReadableId, user: order.user }
     };
   });
 }
@@ -173,3 +174,4 @@ async function handleProviderFailure(claim: CancellationClaim, error: unknown, a
     } });
   });
 }
+
