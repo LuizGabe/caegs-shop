@@ -12,3 +12,8 @@ coverage
 .env.*
 !.env.example
 *.log
+.agents
+.cache
+uploads
+apps/api/uploads
+testes_imagens
