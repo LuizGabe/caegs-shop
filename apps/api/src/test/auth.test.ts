@@ -87,6 +87,26 @@ describe("auth and authorization routes", () => {
     });
   });
 
+  it("redirects to Google without a hosted-domain account filter", async () => {
+    const app = buildApp();
+
+    const response = await app.inject({ method: "GET", url: "/auth/google" });
+    await app.close();
+
+    const location = response.headers.location;
+    expect(response.statusCode).toBe(302);
+    expect(location).toBeDefined();
+
+    const googleUrl = new URL(location as string);
+    expect(googleUrl.origin).toBe("https://accounts.google.com");
+    expect(googleUrl.pathname).toBe("/o/oauth2/v2/auth");
+    expect(googleUrl.searchParams.get("prompt")).toBe("select_account");
+    expect(googleUrl.searchParams.has("hd")).toBe(false);
+    expect(googleUrl.searchParams.get("scope")).toBe("openid email profile");
+    expect(googleUrl.searchParams.get("state")).toBeTruthy();
+    expect(googleUrl.searchParams.get("nonce")).toBeTruthy();
+  });
+
   it("accepts a Google callback with an institutional email", async () => {
     const request = authCallbackUrl(`allowed-${createRandomToken(6)}@sou.unijui.edu.br`);
     const app = buildApp({ authProvider: request.authProvider });

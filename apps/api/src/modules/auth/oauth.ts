@@ -1,4 +1,3 @@
-import { allowedInstitutionalDomains } from "@ca/shared";
 import { config } from "../../config.js";
 
 export function buildGoogleAuthorizationUrl(state: string, nonce: string) {
@@ -13,7 +12,6 @@ export function buildGoogleAuthorizationUrl(state: string, nonce: string) {
   url.searchParams.set("scope", "openid email profile");
   url.searchParams.set("state", state);
   url.searchParams.set("nonce", nonce);
-  url.searchParams.set("hd", allowedInstitutionalDomains.join(" "));
   url.searchParams.set("prompt", "select_account");
 
   return url.toString();

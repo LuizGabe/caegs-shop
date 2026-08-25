@@ -67,7 +67,7 @@ export const WelcomePage: React.FC = () => {
           />
 
           <p className="text-xs text-slate-400">
-            Disponível para estudantes e professores com e-mail <span className="font-medium text-slate-500">@sou.unijui.edu.br</span>
+            Disponível para estudantes e professores com e-mail institucional da UNIJUÍ.
           </p>
         </div>
       </div>
