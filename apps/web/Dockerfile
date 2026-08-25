@@ -11,6 +11,8 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 COPY apps/web apps/web
 COPY packages/shared packages/shared
+ARG VITE_API_URL=""
+ENV VITE_API_URL=$VITE_API_URL
 RUN pnpm --filter @ca/shared build
 RUN pnpm --filter @ca/web build
 

@@ -22,6 +22,7 @@ services:
     env_file:
       - .env
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgresql://ca:ca@postgres:5432/ca_platform?schema=public
       BACKEND_HOST: 0.0.0.0
       UPLOADS_DIR: /app/uploads
@@ -37,6 +38,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3333
     environment:
       VITE_API_URL: http://localhost:3333
     ports:

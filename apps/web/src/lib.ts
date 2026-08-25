@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-export const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:3333";
+export const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3333";
 
 export class ApiError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string) {
