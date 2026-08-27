@@ -56,6 +56,7 @@ export type AuthUser = {
   role: UserRole;
   courseId?: string | null;
   courseConfirmedAt?: string | null;
+  courseCanPurchase: boolean;
   needsProfileCompletion: boolean;
 };
 

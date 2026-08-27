@@ -4,7 +4,9 @@ import { prisma } from "../../plugins/prisma.js";
 import { hashToken } from "../../lib/crypto.js";
 import { sessionCookieName } from "./cookies.js";
 
-export type AuthenticatedUser = Pick<User, "id" | "name" | "email" | "avatarUrl" | "role" | "courseId" | "courseConfirmedAt">;
+export type AuthenticatedUser = Pick<User, "id" | "name" | "email" | "avatarUrl" | "role" | "courseId" | "courseConfirmedAt"> & {
+  courseCanPurchase: boolean;
+};
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -39,7 +41,7 @@ export async function getAuthenticatedUser(request: FastifyRequest) {
       expiresAt: { gt: new Date() }
     },
     include: {
-      user: true
+      user: { include: { course: true } }
     }
   });
 
@@ -54,7 +56,8 @@ export async function getAuthenticatedUser(request: FastifyRequest) {
     avatarUrl: session.user.avatarUrl,
     role: session.user.role,
     courseId: session.user.courseId,
-    courseConfirmedAt: session.user.courseConfirmedAt
+    courseConfirmedAt: session.user.courseConfirmedAt,
+    courseCanPurchase: Boolean(session.user.course?.canPurchase)
   } satisfies AuthenticatedUser;
 }
 
@@ -66,6 +69,28 @@ export async function requireAuthenticated(request: FastifyRequest, reply: Fasti
   }
 
   request.currentUser = user;
+}
+
+export async function requirePurchaseEligible(request: FastifyRequest, reply: FastifyReply) {
+  const user = await getAuthenticatedUser(request);
+
+  if (!user) {
+    return unauthorized(reply);
+  }
+
+  request.currentUser = user;
+
+  if (!user.courseId || !user.courseConfirmedAt) {
+    return reply.status(403).send({
+      error: { code: "COURSE_REQUIRED", message: "Conclua seu cadastro antes de comprar." }
+    });
+  }
+
+  if (!user.courseCanPurchase) {
+    return reply.status(403).send({
+      error: { code: "COURSE_CANNOT_PURCHASE", message: "Seu curso nao esta habilitado para compras." }
+    });
+  }
 }
 
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {

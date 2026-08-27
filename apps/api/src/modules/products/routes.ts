@@ -3,7 +3,7 @@ import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import { z } from "zod";
 import { auditRequestContext } from "../../lib/audit.js";
 import { prisma } from "../../plugins/prisma.js";
-import { requireAdmin } from "../auth/guards.js";
+import { requireAdmin, requirePurchaseEligible } from "../auth/guards.js";
 import { storage } from "../storage/storage.js";
 import { productForApi, productInclude, uniqueSlug } from "./service.js";
 
@@ -58,14 +58,15 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const content = await storage.read(key);
     if (!content) return reply.status(404).send();
     reply.header("Cross-Origin-Resource-Policy", "cross-origin");
+    reply.header("Cache-Control", "public, max-age=604800, immutable");
     return reply.type(key.endsWith(".png") ? "image/png" : key.endsWith(".webp") ? "image/webp" : "image/jpeg").send(content);
   });
 
-  app.get("/products", async () => {
+  app.get("/products", { preHandler: requirePurchaseEligible }, async () => {
     const products = await prisma.product.findMany({ where: publicWindow(), include: productInclude, orderBy: [{ featured: "desc" }, { displayOrder: "asc" }, { createdAt: "desc" }] });
     return { products: products.map((product) => productForApi(product)) };
   });
-  app.get("/products/:slug", async (request, reply) => {
+  app.get("/products/:slug", { preHandler: requirePurchaseEligible }, async (request, reply) => {
     const product = await prisma.product.findFirst({
       where: { slug: slugSchema.parse(request.params).slug, ...publicWindow() },
       include: { variants: { where: { active: true, deletedAt: null }, orderBy: { displayOrder: "asc" } }, images: { where: { deletedAt: null }, orderBy: { displayOrder: "asc" } } }

@@ -34,6 +34,7 @@ function publicUser(user: Awaited<ReturnType<typeof getAuthenticatedUser>>) {
     role: user.role,
     courseId: user.courseId,
     courseConfirmedAt: user.courseConfirmedAt,
+    courseCanPurchase: user.courseCanPurchase,
     needsProfileCompletion: !user.courseId
   };
 }
@@ -166,7 +167,7 @@ export function authRoutes(authProvider: GoogleAuthProvider): FastifyPluginAsync
         include: { course: true }
       });
 
-      return { user: publicUser(updatedUser), course: updatedUser.course };
+      return { user: publicUser({ ...updatedUser, courseCanPurchase: Boolean(updatedUser.course?.canPurchase) }), course: updatedUser.course };
     });
   };
 }

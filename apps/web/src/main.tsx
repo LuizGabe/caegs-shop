@@ -81,6 +81,9 @@ function Shell() {
   }
 
   // 4. Authenticated with complete profile (Main Application)
+  const canPurchase = user.courseCanPurchase;
+  const fallbackPath = user.role === "ADMIN" ? "/admin" : "/profile";
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       {/* Sticky Glassmorphism Header */}
@@ -98,9 +101,11 @@ function Shell() {
 
           {/* Navigation Links */}
           <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium text-slate-600">
-            <NavLink to="/products" icon={<Store size={16} />}>
-              Produtos
-            </NavLink>
+            {canPurchase && (
+              <NavLink to="/products" icon={<Store size={16} />}>
+                Produtos
+              </NavLink>
+            )}
 
             <NavLink to="/orders" icon={<PackageCheck size={16} />}>
               Meus Pedidos
@@ -113,14 +118,16 @@ function Shell() {
               </NavLink>
             )}
 
-            <NavLink to="/cart" className="relative p-2" ariaLabel={`Carrinho com ${cartCount} itens`}>
-              <ShoppingBag size={20} className="text-slate-700" />
-              {cartCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow-xs">
-                  {cartCount}
-                </span>
-              )}
-            </NavLink>
+            {canPurchase && (
+              <NavLink to="/cart" className="relative p-2" ariaLabel={`Carrinho com ${cartCount} itens`}>
+                <ShoppingBag size={20} className="text-slate-700" />
+                {cartCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow-xs">
+                    {cartCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
 
             <Link to="/profile" className="ml-1 sm:ml-2 pl-2 border-l border-slate-200 flex items-center gap-2" title="Meu Perfil">
               <Avatar src={user.avatarUrl} name={user.name} size="sm" />
@@ -132,13 +139,13 @@ function Shell() {
       {/* Main Content Area */}
       <main className="flex-1 mx-auto max-w-6xl w-full px-4 py-6 sm:py-8">
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/products" element={<CatalogPage />} />
-          <Route path="/products/:slug" element={<ProductPage />} />
+          <Route path="/" element={canPurchase ? <HomePage /> : <ProfilePage />} />
+          <Route path="/products" element={canPurchase ? <CatalogPage /> : <Navigate to={fallbackPath} replace />} />
+          <Route path="/products/:slug" element={canPurchase ? <ProductPage /> : <Navigate to={fallbackPath} replace />} />
           <Route path="/orders" element={<OrdersPage />} />
           <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/cart" element={<CartPage />} />
-          <Route path="/checkout/:publicId" element={<PaymentPage />} />
+          <Route path="/cart" element={canPurchase ? <CartPage /> : <Navigate to={fallbackPath} replace />} />
+          <Route path="/checkout/:publicId" element={canPurchase ? <PaymentPage /> : <Navigate to={fallbackPath} replace />} />
 
           {/* Admin Routes strictly protected on client side */}
           {user.role === "ADMIN" ? (
