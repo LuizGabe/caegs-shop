@@ -134,6 +134,54 @@ describe("PIX checkout", () => {
     await app.close();
   });
 
+  it("does not persist an order or payment when Asaas refuses the PIX charge", async () => {
+    const paymentProvider = provider();
+    paymentProvider.createPixPayment.mockRejectedValueOnce(Object.assign(new Error("Asaas indisponivel"), { statusCode: 502 }));
+    const app = buildApp({ paymentProvider });
+    const buyer = await session();
+    const item = await product();
+    const ordersBefore = await prisma.order.count({ where: { userId: buyer.user.id } });
+    const paymentsBefore = await prisma.payment.count({ where: { order: { userId: buyer.user.id } } });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/checkout",
+      headers: { cookie: buyer.cookie, "idempotency-key": createRandomToken(24) },
+      payload: { cpfCnpj: "24971563792", items: [{ productId: item.id, productVariantId: item.variants[0]!.id, quantity: 1 }] }
+    });
+
+    expect(response.statusCode).toBe(502);
+    await expect(prisma.order.count({ where: { userId: buyer.user.id } })).resolves.toBe(ordersBefore);
+    await expect(prisma.payment.count({ where: { order: { userId: buyer.user.id } } })).resolves.toBe(paymentsBefore);
+    expect(paymentProvider.getPixQrCode).not.toHaveBeenCalled();
+    expect(paymentProvider.deletePayment).not.toHaveBeenCalled();
+    await app.close();
+  });
+
+  it("deletes the external charge and does not persist locally when PIX QR Code creation fails", async () => {
+    const paymentProvider = provider();
+    paymentProvider.getPixQrCode.mockRejectedValueOnce(Object.assign(new Error("QR Code indisponivel"), { statusCode: 502 }));
+    const app = buildApp({ paymentProvider });
+    const buyer = await session();
+    const item = await product();
+    const ordersBefore = await prisma.order.count({ where: { userId: buyer.user.id } });
+    const paymentsBefore = await prisma.payment.count({ where: { order: { userId: buyer.user.id } } });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/checkout",
+      headers: { cookie: buyer.cookie, "idempotency-key": createRandomToken(24) },
+      payload: { cpfCnpj: "24971563792", items: [{ productId: item.id, productVariantId: item.variants[0]!.id, quantity: 1 }] }
+    });
+
+    expect(response.statusCode).toBe(502);
+    await expect(prisma.order.count({ where: { userId: buyer.user.id } })).resolves.toBe(ordersBefore);
+    await expect(prisma.payment.count({ where: { order: { userId: buyer.user.id } } })).resolves.toBe(paymentsBefore);
+    expect(paymentProvider.deletePayment).toHaveBeenCalledTimes(1);
+    expect(paymentProvider.deletePayment).toHaveBeenCalledWith(expect.stringMatching(/^pay_checkout:/));
+    await app.close();
+  });
+
 });
 
 

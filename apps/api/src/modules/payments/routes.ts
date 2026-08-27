@@ -51,65 +51,14 @@ export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
       }
 
       if (!payment) {
-        try {
-          payment = await prisma.$transaction(async (tx) => {
-            const snapshots = await Promise.all(input.items.map(async (item) => {
-              const product = await tx.product.findFirst({ where: { id: item.productId, ...saleWindow(), deletedAt: null } });
-              const variant = await tx.productVariant.findFirst({
-                where: { id: item.productVariantId, productId: item.productId, active: true, deletedAt: null }
-              });
-              if (!product || !variant) {
-                throw Object.assign(new Error("Um produto ou variante nao esta disponivel."), { statusCode: 400 });
-              }
-              return {
-                productId: product.id,
-                productVariantId: variant.id,
-                productNameSnapshot: product.name,
-                variantNameSnapshot: variant.name,
-                unitPrice: product.salePrice,
-                quantity: item.quantity,
-                totalPrice: product.salePrice.mul(item.quantity)
-              };
-            }));
-            const total = snapshots.reduce((sum, item) => sum.add(item.totalPrice), new Prisma.Decimal(0));
-            const orderIdentity = await createHumanReadableOrderFields(tx);
-            const order = await tx.order.create({
-              data: {
-                publicId: createPublicOrderId(),
-                ...orderIdentity,
-                userId: user.id,
-                subtotal: total,
-                total,
-                items: { create: snapshots },
-                statusHistory: {
-                  create: {
-                    newPaymentStatus: "PENDING",
-                    newFulfillmentStatus: "WAITING_PAYMENT",
-                    source: "SYSTEM",
-                    note: "Checkout PIX criado."
-                  }
-                }
-              }
-            });
-            return tx.payment.create({
-              data: {
-                orderId: order.id,
-                idempotencyKey,
-                provider: "ASAAS",
-                method: "PIX",
-                amount: total
-              },
-              include: paymentInclude
-            });
-          });
-        } catch (error) {
-          if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
-          payment = await prisma.payment.findUnique({ where: { idempotencyKey }, include: paymentInclude });
-          if (!payment || payment.order.userId !== user.id) throw error;
-        }
+        payment = await createAtomicPixCheckout(provider, {
+          idempotencyKey,
+          user,
+          input,
+          cpfCnpj
+        });
       }
 
-      payment = await ensurePixData(provider, payment.id, cpfCnpj);
       return reply.status(201).send({
         order: orderForApi(payment.order),
         payment: paymentForApi(payment)
@@ -132,41 +81,117 @@ export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
   };
 }
 
-async function ensurePixData(provider: PaymentProvider, paymentId: string, cpfCnpj: string) {
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${paymentId}))`;
-    let payment = await tx.payment.findUniqueOrThrow({ where: { id: paymentId }, include: paymentInclude });
-    if (!payment.providerPaymentId) {
-      const charge = await provider.createPixPayment({
-        externalReference: payment.id,
-        customer: { ...payment.order.user, cpfCnpj },
-        amount: Number(payment.amount),
-        description: `Pedido #${payment.order.humanReadableId}`,
-        dueDate: dueDate()
-      });
-      payment = await tx.payment.update({
-        where: { id: payment.id },
+type AuthenticatedUser = NonNullable<FastifyRequestWithCurrentUser["currentUser"]>;
+type CheckoutInput = z.infer<typeof createOrderSchema>;
+type CheckoutSnapshot = {
+  productId: string;
+  productVariantId: string;
+  productNameSnapshot: string;
+  variantNameSnapshot: string;
+  unitPrice: Prisma.Decimal;
+  quantity: number;
+  totalPrice: Prisma.Decimal;
+};
+
+type FastifyRequestWithCurrentUser = {
+  currentUser?: {
+    id: string;
+    name: string;
+    email: string;
+    courseId: string | null;
+    courseConfirmedAt: Date | null;
+  };
+};
+
+async function createAtomicPixCheckout(
+  provider: PaymentProvider,
+  params: {
+    idempotencyKey: string;
+    user: AuthenticatedUser;
+    input: CheckoutInput;
+    cpfCnpj: string;
+  }
+) {
+  const snapshots = await checkoutSnapshots(params.input);
+  const total = snapshots.reduce((sum, item) => sum.add(item.totalPrice), new Prisma.Decimal(0));
+  const externalReference = `checkout:${params.idempotencyKey}`;
+  let providerPaymentId: string | null = null;
+
+  try {
+    const charge = await provider.createPixPayment({
+      externalReference,
+      customer: { ...params.user, cpfCnpj: params.cpfCnpj },
+      amount: Number(total),
+      description: "Pedido CAEGS",
+      dueDate: dueDate()
+    });
+    providerPaymentId = charge.providerPaymentId;
+    const qrCode = await provider.getPixQrCode(charge.providerPaymentId);
+
+    return await prisma.$transaction(async (tx) => {
+      const orderIdentity = await createHumanReadableOrderFields(tx);
+      const order = await tx.order.create({
         data: {
+          publicId: createPublicOrderId(),
+          ...orderIdentity,
+          userId: params.user.id,
+          subtotal: total,
+          total,
+          items: { create: snapshots },
+          statusHistory: {
+            create: {
+              newPaymentStatus: "PENDING",
+              newFulfillmentStatus: "WAITING_PAYMENT",
+              source: "SYSTEM",
+              note: "Checkout PIX criado."
+            }
+          }
+        }
+      });
+      return tx.payment.create({
+        data: {
+          orderId: order.id,
+          idempotencyKey: params.idempotencyKey,
+          provider: "ASAAS",
           providerCustomerId: charge.providerCustomerId,
-          providerPaymentId: charge.providerPaymentId
-        },
-        include: paymentInclude
-      });
-    }
-    if (!payment.pixCopyPasteCode || !payment.pixQrCodeImage) {
-      const qrCode = await provider.getPixQrCode(payment.providerPaymentId!);
-      payment = await tx.payment.update({
-        where: { id: payment.id },
-        data: {
+          providerPaymentId: charge.providerPaymentId,
+          method: "PIX",
+          amount: total,
           pixQrCodeImage: qrCode.encodedImage,
           pixCopyPasteCode: qrCode.payload,
           pixExpiresAt: qrCode.expirationDate ? new Date(qrCode.expirationDate) : null
         },
         include: paymentInclude
       });
+    });
+  } catch (error) {
+    const existing = await prisma.payment.findUnique({ where: { idempotencyKey: params.idempotencyKey }, include: paymentInclude });
+    if (existing && existing.order.userId === params.user.id) return existing;
+    if (providerPaymentId) await provider.deletePayment(providerPaymentId).catch(() => undefined);
+    throw error;
+  }
+}
+
+async function checkoutSnapshots(input: CheckoutInput): Promise<CheckoutSnapshot[]> {
+  const snapshots = await Promise.all(input.items.map(async (item) => {
+    const product = await prisma.product.findFirst({ where: { id: item.productId, ...saleWindow(), deletedAt: null } });
+    const variant = await prisma.productVariant.findFirst({
+      where: { id: item.productVariantId, productId: item.productId, active: true, deletedAt: null }
+    });
+    if (!product || !variant) {
+      throw Object.assign(new Error("Um produto ou variante nao esta disponivel."), { statusCode: 400 });
     }
-    return payment;
-  }, { timeout: 30_000 });
+    return {
+      productId: product.id,
+      productVariantId: variant.id,
+      productNameSnapshot: product.name,
+      variantNameSnapshot: variant.name,
+      unitPrice: product.salePrice,
+      quantity: item.quantity,
+      totalPrice: product.salePrice.mul(item.quantity)
+    };
+  }));
+  return snapshots;
 }
 
 function isValidCpfCnpj(value: string) {
