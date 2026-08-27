@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
-import type { Order, OrderItem, ProductImage, ProductionBatch } from "@prisma/client";
+import type { Order, OrderItem, Payment, ProductImage, ProductionBatch } from "@prisma/client";
 import { createRandomToken } from "../../lib/crypto.js";
 import { config } from "../../config.js";
 import { prisma } from "../../plugins/prisma.js";
@@ -25,6 +25,10 @@ export const orderInclude = {
     }
   },
   statusHistory: { orderBy: { createdAt: "desc" }, include: { order: false } },
+  payments: {
+    orderBy: { createdAt: "desc" },
+    take: 1
+  },
   productionBatchOrders: {
     where: { productionBatch: { deletedAt: null } },
     take: 1,
@@ -35,13 +39,15 @@ type OrderItemForApi = OrderItem & { product?: { images?: Array<Pick<ProductImag
 
 type OrderForApiInput = Order & {
   items?: OrderItemForApi[];
+  payments?: Payment[];
   productionBatchOrders?: Array<{ productionBatch: Pick<ProductionBatch, "pickupLocation" | "pickupNotes" | "pickupDate" | "pickupTime"> }>;
   [key: string]: unknown;
 };
 
 export function orderForApi(order: OrderForApiInput) {
-  const { subtotal, total, items, productionBatchOrders, ...rest } = order;
+  const { subtotal, total, items, payments, productionBatchOrders, ...rest } = order;
   const batch = productionBatchOrders?.[0]?.productionBatch;
+  const payment = payments?.[0] ?? null;
   const pickupTime = batch?.pickupTime instanceof Date ? batch.pickupTime.toISOString().slice(11, 16) : null;
   return {
     ...rest,
@@ -65,7 +71,19 @@ export function orderForApi(order: OrderForApiInput) {
       notes: batch?.pickupNotes ?? null,
       date: batch?.pickupDate instanceof Date ? batch.pickupDate.toISOString().slice(0, 10) : null,
       time: pickupTime
-    }
+    },
+    payment: payment ? {
+      id: payment.id,
+      provider: payment.provider,
+      method: payment.method,
+      status: payment.status,
+      amount: Number(payment.amount),
+      pixQrCodeImage: payment.pixQrCodeImage,
+      pixCopyPasteCode: payment.pixCopyPasteCode,
+      pixExpiresAt: payment.pixExpiresAt,
+      confirmedAt: payment.confirmedAt,
+      refundedAt: payment.refundedAt
+    } : null
   };
 }
 export function createPublicOrderId() {

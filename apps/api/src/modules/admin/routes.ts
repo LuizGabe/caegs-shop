@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "../../plugins/prisma.js";
 import { requireAdmin } from "../auth/guards.js";
 import { auditRequestContext } from "../../lib/audit.js";
+import { orderForApi, orderInclude } from "../orders/service.js";
 
 const updateUserCourseParamsSchema = z.object({
   userId: z.string().min(1)
@@ -68,6 +69,27 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     return { users };
   });
+
+  app.get("/admin/users/:userId/orders", { preHandler: requireAdmin }, async (request, reply) => {
+    const params = updateUserCourseParamsSchema.parse(request.params);
+    const user = await prisma.user.findFirst({
+      where: { id: params.userId, deletedAt: null },
+      select: { id: true }
+    });
+
+    if (!user) {
+      return reply.status(404).send({ error: { code: "USER_NOT_FOUND", message: "Usuario nao encontrado." } });
+    }
+
+    const orders = await prisma.order.findMany({
+      where: { userId: params.userId },
+      include: orderInclude,
+      orderBy: { createdAt: "desc" }
+    });
+
+    return { orders: orders.map(orderForApi) };
+  });
+
   app.patch("/admin/users/:userId/course", { preHandler: requireAdmin }, async (request, reply) => {
     const actorUser = request.currentUser;
 

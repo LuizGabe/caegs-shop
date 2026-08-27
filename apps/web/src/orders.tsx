@@ -1,7 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2, Clock3, MapPin, Package, Calendar, AlertCircle } from "lucide-react";
+import { Check, CheckCircle2, Clock3, Copy, ExternalLink, MapPin, Package, Calendar, AlertCircle, QrCode } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 import { GlassCard } from "./components/ui/GlassCard";
 import { Badge, type BadgeProps } from "./components/ui/Badge";
+import { Button } from "./components/ui/Button";
 import { Skeleton } from "./components/ui/Skeleton";
 import { EmptyState } from "./components/ui/EmptyState";
 import { apiUrl, currency, request } from "./lib";
@@ -16,6 +19,14 @@ type Order = {
   paymentStatus: string;
   total: number;
   createdAt: string;
+  payment: {
+    id: string;
+    status: string;
+    amount: number;
+    pixQrCodeImage: string | null;
+    pixCopyPasteCode: string | null;
+    pixExpiresAt: string | null;
+  } | null;
   items: Array<{ id: string; productNameSnapshot: string; variantNameSnapshot: string; quantity: number; thumbnailUrl: string | null; thumbnailAltText: string | null }>;
   pickup: {
     available: boolean;
@@ -145,6 +156,8 @@ export function OrdersPage() {
                 </div>
               </div>
 
+              <PendingPayment order={order} />
+
               {/* Pickup Information Section */}
               <PickupStatus pickup={order.pickup} />
             </GlassCard>
@@ -152,6 +165,88 @@ export function OrdersPage() {
         })}
       </div>
     </section>
+  );
+}
+
+function PendingPayment({ order }: { order: Order }) {
+  const [copied, setCopied] = useState(false);
+  const payment = order.payment;
+  const shouldPay = order.paymentStatus === "PENDING" || order.fulfillmentStatus === "WAITING_PAYMENT";
+  const pixCode = payment?.pixCopyPasteCode ?? "";
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeout = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
+
+  if (!shouldPay || !payment) return null;
+
+  return (
+    <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-950">
+            <QrCode size={18} className="text-amber-700" />
+            <span>Pagamento PIX pendente</span>
+          </div>
+          <p className="mt-1 text-xs text-amber-800">
+            Use o QR Code ou o copia e cola para concluir o pedido.
+          </p>
+        </div>
+        <Link to={`/checkout/${order.publicId}`} className="inline-flex">
+          <Button size="sm" variant="secondary" rightIcon={<ExternalLink size={14} />}>
+            Abrir pagamento
+          </Button>
+        </Link>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-[148px_1fr] sm:items-start">
+        <div className="aspect-square rounded-xl border border-amber-200 bg-white p-2 shadow-xs flex items-center justify-center">
+          {payment.pixQrCodeImage ? (
+            <img className="h-full w-full object-contain" src={`data:image/png;base64,${payment.pixQrCodeImage}`} alt="QR Code PIX" />
+          ) : (
+            <QrCode className="h-16 w-16 text-slate-300" />
+          )}
+        </div>
+
+        <div className="space-y-3 min-w-0">
+          <div>
+            <p className="text-xs font-semibold text-amber-900 uppercase tracking-wider">Valor do PIX</p>
+            <p className="text-xl font-extrabold text-slate-900">{currency.format(payment.amount)}</p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-amber-900 uppercase tracking-wider mb-1.5">PIX copia e cola</p>
+            <div className="flex items-stretch gap-1">
+              <textarea
+                readOnly
+                value={pixCode}
+                className="min-h-[68px] flex-1 resize-none rounded-xl border border-amber-200 bg-white/80 p-2.5 text-[11px] font-mono text-slate-700 leading-tight focus:outline-none"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!pixCode}
+                className="shrink-0 px-3"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(pixCode);
+                  setCopied(true);
+                }}
+              >
+                {copied ? <Check size={18} className="text-blue-700" /> : <Copy size={18} />}
+              </Button>
+            </div>
+          </div>
+
+          {payment.pixExpiresAt && (
+            <p className="text-[11px] font-mono text-amber-800">
+              Vencimento: {new Date(payment.pixExpiresAt).toLocaleString("pt-BR")}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
