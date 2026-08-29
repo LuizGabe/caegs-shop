@@ -1,0 +1,98 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy to services
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    env:
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_attempt }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          set -euo pipefail
+          docker build -f apps/api/Dockerfile -t caegs-shop-api:local .
+          docker build -f apps/web/Dockerfile --build-arg VITE_API_URL=/api -t caegs-shop-web:local .
+
+      - name: Package deploy artifact
+        run: |
+          set -euo pipefail
+          mkdir -p deploy-artifact
+          docker save caegs-shop-api:local caegs-shop-web:local | gzip -1 > deploy-artifact/caegs-shop-images.tar.gz
+          cp docker-compose.prod.yml deploy-artifact/docker-compose.prod.yml
+          sha256sum deploy-artifact/caegs-shop-images.tar.gz deploy-artifact/docker-compose.prod.yml > deploy-artifact/SHA256SUMS
+
+      - name: Install WireGuard tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends wireguard-tools openssh-client
+
+      - name: Start WireGuard tunnel
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "${{ secrets.WG_CONFIG }}" > "$RUNNER_TEMP/github-actions.conf"
+          sudo wg-quick up "$RUNNER_TEMP/github-actions.conf"
+
+      - name: Prepare SSH
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github-deploy
+          chmod 600 ~/.ssh/github-deploy
+          ssh-keyscan -T 10 10.5.5.10 >> ~/.ssh/known_hosts
+
+      - name: Upload artifact
+        run: |
+          set -euo pipefail
+          remote_dir="/srv/docker/deploy-inbox/caegs-shop/${RELEASE_ID}"
+          ssh -i ~/.ssh/github-deploy \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o ConnectTimeout=10 \
+            github-deploy@10.5.5.10 \
+            "mkdir -p '$remote_dir'"
+          scp -i ~/.ssh/github-deploy \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o ConnectTimeout=10 \
+            deploy-artifact/caegs-shop-images.tar.gz \
+            deploy-artifact/docker-compose.prod.yml \
+            deploy-artifact/SHA256SUMS \
+            github-deploy@10.5.5.10:"$remote_dir/"
+
+      - name: Deploy on services
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/github-deploy \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o ConnectTimeout=10 \
+            github-deploy@10.5.5.10 \
+            "cd /srv/docker/deploy-inbox/caegs-shop/${RELEASE_ID} && sha256sum -c SHA256SUMS && sudo /usr/local/sbin/deploy-caegs-shop '${RELEASE_ID}'"
+
+      - name: Stop WireGuard tunnel
+        if: always()
+        run: |
+          sudo wg-quick down "$RUNNER_TEMP/github-actions.conf" || true
