@@ -1,0 +1,46 @@
+name: Deploy Connectivity
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-edge-ssh:
+    name: Test WireGuard SSH to edge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Install WireGuard tools
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends wireguard-tools
+
+      - name: Start WireGuard tunnel
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s\n' "${{ secrets.WG_CONFIG }}" > "$RUNNER_TEMP/github-actions.conf"
+          sudo wg-quick up "$RUNNER_TEMP/github-actions.conf"
+          sudo wg show
+
+      - name: Test SSH access
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github-deploy
+          chmod 600 ~/.ssh/github-deploy
+          ssh-keyscan -T 10 10.5.5.1 >> ~/.ssh/known_hosts
+          ssh \
+            -i ~/.ssh/github-deploy \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o ConnectTimeout=10 \
+            github-deploy@10.5.5.1 \
+            'hostname && id -un && echo deploy-connectivity-ok'
+
+      - name: Stop WireGuard tunnel
+        if: always()
+        run: |
+          sudo wg-quick down "$RUNNER_TEMP/github-actions.conf" || true
