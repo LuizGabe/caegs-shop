@@ -49,14 +49,14 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          printf '%s' "${{ secrets.WG_CONFIG }}" > "$RUNNER_TEMP/github-actions.conf"
+          printf '%s' "${{ secrets.WG_CONFIG }}" | tr -d '\r' > "$RUNNER_TEMP/github-actions.conf"
           sudo wg-quick up "$RUNNER_TEMP/github-actions.conf"
 
       - name: Prepare SSH
         run: |
           set -euo pipefail
           install -m 700 -d ~/.ssh
-          printf '%s' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/github-deploy
+          printf '%s' "${{ secrets.SSH_PRIVATE_KEY }}" | tr -d '\r' > ~/.ssh/github-deploy
           chmod 600 ~/.ssh/github-deploy
           ssh-keyscan -T 10 10.5.5.10 >> ~/.ssh/known_hosts
 
