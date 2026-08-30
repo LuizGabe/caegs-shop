@@ -37,7 +37,7 @@ jobs:
           mkdir -p deploy-artifact
           docker save caegs-shop-api:local caegs-shop-web:local | gzip -1 > deploy-artifact/caegs-shop-images.tar.gz
           cp docker-compose.prod.yml deploy-artifact/docker-compose.prod.yml
-          sha256sum deploy-artifact/caegs-shop-images.tar.gz deploy-artifact/docker-compose.prod.yml > deploy-artifact/SHA256SUMS
+          (cd deploy-artifact && sha256sum caegs-shop-images.tar.gz docker-compose.prod.yml > SHA256SUMS)
 
       - name: Install WireGuard tools
         run: |
