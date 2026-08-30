@@ -1,12 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, Plus, Trash2, ShieldAlert, Package, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, Plus, Trash2, ShieldAlert, Package, Star } from "lucide-react";
 import { useState } from "react";
 import { Button } from "./components/ui/Button";
 import { GlassCard } from "./components/ui/GlassCard";
 import { Badge } from "./components/ui/Badge";
 import { Skeleton } from "./components/ui/Skeleton";
 import { EmptyState } from "./components/ui/EmptyState";
-import { apiUrl, request, type Product } from "./lib";
+import { apiUrl, request, type Product, type ProductImage } from "./lib";
 
 export function AdminPage() {
   const queryClient = useQueryClient();
@@ -286,12 +286,56 @@ export function AdminPage() {
 function ProductAssets({ product, refresh }: { product: Product; refresh: (productId?: string) => Promise<void> }) {
   const [variant, setVariant] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [isUpdatingImages, setIsUpdatingImages] = useState(false);
+
+  const sortedImages = (type: ProductImage["type"]) =>
+    product.images
+      .filter((image) => image.type === type)
+      .sort((left, right) => left.displayOrder - right.displayOrder || left.id.localeCompare(right.id));
+
+  const productPhotos = sortedImages("PRODUCT");
+  const sizeGuides = sortedImages("SIZE_GUIDE");
+
+  const saveImageOrder = async (images: ProductImage[]) => {
+    setIsUpdatingImages(true);
+    try {
+      await Promise.all(
+        images.map((image, index) =>
+          request(`/admin/products/${product.id}/images/${image.id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ displayOrder: index })
+          })
+        )
+      );
+      await refresh(product.id);
+    } finally {
+      setIsUpdatingImages(false);
+    }
+  };
+
+  const moveImage = async (imageId: string, type: ProductImage["type"], direction: -1 | 1) => {
+    const images = sortedImages(type);
+    const index = images.findIndex((image) => image.id === imageId);
+    const nextIndex = index + direction;
+    if (index < 0 || nextIndex < 0 || nextIndex >= images.length) return;
+    const nextImages = [...images];
+    [nextImages[index], nextImages[nextIndex]] = [nextImages[nextIndex]!, nextImages[index]!];
+    await saveImageOrder(nextImages);
+  };
+
+  const makePrimary = async (imageId: string) => {
+    const target = productPhotos.find((image) => image.id === imageId);
+    if (!target || productPhotos[0]?.id === imageId) return;
+    await saveImageOrder([target, ...productPhotos.filter((image) => image.id !== imageId)]);
+  };
 
   const upload = async (files: FileList | null, type: "PRODUCT" | "SIZE_GUIDE") => {
     if (!files) return;
     setIsUploading(true);
     try {
-      for (const file of Array.from(files)) {
+      const existingOrders = sortedImages(type).map((image) => image.displayOrder);
+      const nextDisplayOrder = existingOrders.length ? Math.max(...existingOrders) + 1 : 0;
+      for (const [index, file] of Array.from(files).entries()) {
         const contentBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
@@ -300,7 +344,7 @@ function ProductAssets({ product, refresh }: { product: Product; refresh: (produ
         });
         await request(`/admin/products/${product.id}/images`, {
           method: "POST",
-          body: JSON.stringify({ type, altText: file.name, fileName: file.name, mimeType: file.type, contentBase64 })
+          body: JSON.stringify({ type, altText: file.name, displayOrder: nextDisplayOrder + index, fileName: file.name, mimeType: file.type, contentBase64 })
         });
       }
       await refresh(product.id);
@@ -393,31 +437,123 @@ function ProductAssets({ product, refresh }: { product: Product; refresh: (produ
         </div>
 
         {isUploading && <p className="mt-2 text-xs text-blue-700 animate-pulse font-medium">Fazendo upload das imagens...</p>}
+        {isUpdatingImages && <p className="mt-2 text-xs text-blue-700 animate-pulse font-medium">Atualizando ordem das imagens...</p>}
 
-        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {product.images.map((image) => (
-            <div key={image.id} className="relative group rounded-xl overflow-hidden border border-slate-200 aspect-square">
-              <img src={`${apiUrl}${image.url}`} alt={image.altText} className="h-full w-full object-cover" />
-              <div className="absolute top-1 left-1">
-                <Badge variant={image.type === "SIZE_GUIDE" ? "sky" : "slate"}>
-                  {image.type === "SIZE_GUIDE" ? "Guia" : "Foto"}
-                </Badge>
-              </div>
-              <button
-                type="button"
-                title="Remover imagem"
-                onClick={async () => {
-                  await request(`/admin/products/${product.id}/images/${image.id}`, { method: "DELETE" });
-                  await refresh(product.id);
-                }}
-                className="absolute top-1 right-1 bg-white/90 text-rose-600 p-1.5 rounded-lg shadow-sm hover:bg-rose-600 hover:text-white transition-colors"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
-        </div>
+        <ImageGroup
+          title="Fotos do Produto"
+          images={productPhotos}
+          emptyText="Nenhuma foto cadastrada."
+          primaryImageId={productPhotos[0]?.id}
+          isBusy={isUpdatingImages}
+          onMove={(imageId, direction) => moveImage(imageId, "PRODUCT", direction)}
+          onMakePrimary={makePrimary}
+          onDelete={async (imageId) => {
+            await request(`/admin/products/${product.id}/images/${imageId}`, { method: "DELETE" });
+            await refresh(product.id);
+          }}
+        />
+
+        <ImageGroup
+          title="Guia de Medidas"
+          images={sizeGuides}
+          emptyText="Nenhum guia de medidas cadastrado."
+          isBusy={isUpdatingImages}
+          onMove={(imageId, direction) => moveImage(imageId, "SIZE_GUIDE", direction)}
+          onDelete={async (imageId) => {
+            await request(`/admin/products/${product.id}/images/${imageId}`, { method: "DELETE" });
+            await refresh(product.id);
+          }}
+        />
       </div>
+    </div>
+  );
+}
+
+function ImageGroup({
+  title,
+  images,
+  emptyText,
+  primaryImageId,
+  isBusy,
+  onMove,
+  onMakePrimary,
+  onDelete
+}: {
+  title: string;
+  images: ProductImage[];
+  emptyText: string;
+  primaryImageId?: string | undefined;
+  isBusy: boolean;
+  onMove: (imageId: string, direction: -1 | 1) => Promise<void>;
+  onMakePrimary?: (imageId: string) => Promise<void>;
+  onDelete: (imageId: string) => Promise<void>;
+}) {
+  return (
+    <div className="mt-5">
+      <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-700">{title}</h4>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {images.map((image, index) => {
+          const isPrimary = image.id === primaryImageId;
+          return (
+            <div key={image.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+              <div className="relative aspect-square overflow-hidden bg-slate-100">
+                <img src={`${apiUrl}${image.url}`} alt={image.altText} className="h-full w-full object-cover" />
+                <div className="absolute left-1 top-1 flex flex-wrap gap-1">
+                  <Badge variant={image.type === "SIZE_GUIDE" ? "sky" : "slate"}>
+                    {image.type === "SIZE_GUIDE" ? "Guia" : `Foto ${index + 1}`}
+                  </Badge>
+                  {isPrimary && <Badge variant="amber">Principal</Badge>}
+                </div>
+              </div>
+              <div className={`${onMakePrimary ? "grid-cols-4" : "grid-cols-3"} grid gap-1 border-t border-slate-100 bg-slate-50 p-1`}>
+                <button
+                  type="button"
+                  title="Mover para esquerda"
+                  aria-label="Mover imagem para esquerda"
+                  disabled={isBusy || index === 0}
+                  onClick={() => onMove(image.id, -1)}
+                  className="flex h-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ArrowLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  title="Mover para direita"
+                  aria-label="Mover imagem para direita"
+                  disabled={isBusy || index === images.length - 1}
+                  onClick={() => onMove(image.id, 1)}
+                  className="flex h-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <ArrowRight size={14} />
+                </button>
+                {onMakePrimary && (
+                  <button
+                    type="button"
+                    title="Tornar imagem principal"
+                    aria-label="Tornar imagem principal"
+                    disabled={isBusy || isPrimary}
+                    onClick={() => onMakePrimary(image.id)}
+                    className="flex h-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-35"
+                  >
+                    <Star size={14} fill={isPrimary ? "currentColor" : "none"} />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  title="Remover imagem"
+                  aria-label="Remover imagem"
+                  disabled={isBusy}
+                  onClick={() => onDelete(image.id)}
+                  className="flex h-8 items-center justify-center rounded-lg text-rose-600 transition-colors hover:bg-rose-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {!images.length && <p className="text-xs text-slate-400">{emptyText}</p>}
     </div>
   );
 }

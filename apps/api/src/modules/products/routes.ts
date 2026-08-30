@@ -201,7 +201,11 @@ export const productRoutes: FastifyPluginAsync = async (app) => {
     const data = imageBody.parse(request.body);
     const stored = await storage.upload(data);
     const image = await prisma.$transaction(async (tx) => {
-      const created = await tx.productImage.create({ data: { productId, type: data.type, altText: data.altText, displayOrder: data.displayOrder ?? 0, url: stored.url } });
+      const highestOrder = (await tx.productImage.aggregate({
+        where: { productId, type: data.type, deletedAt: null },
+        _max: { displayOrder: true }
+      }))._max.displayOrder ?? -1;
+      const created = await tx.productImage.create({ data: { productId, type: data.type, altText: data.altText, displayOrder: data.displayOrder ?? highestOrder + 1, url: stored.url } });
       await tx.auditLog.create({ data: { actorUserId: request.currentUser!.id, action: "PRODUCT_IMAGE_CREATED", entityType: "ProductImage", entityId: created.id, metadata: { productId, type: data.type }, ...auditRequestContext(request) } });
       return created;
     });
