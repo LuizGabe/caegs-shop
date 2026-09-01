@@ -166,7 +166,7 @@ function UserCourseRow({
         <div className="flex items-start gap-3 min-w-0">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="font-bold text-sm text-slate-900 line-clamp-1">{user.name}</h2>
+              <h2 className="font-bold text-sm text-slate-900 line-clamp-2 sm:line-clamp-1">{user.name}</h2>
               <Badge variant={user.role === "ADMIN" ? "indigo" : "slate"}>{user.role === "ADMIN" ? "Admin" : "Usuário"}</Badge>
             </div>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
@@ -226,9 +226,9 @@ function UserOrdersModal({ user, onClose }: { user: AdminUser; onClose: () => vo
   const detail = detailQuery.data?.user;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
-      <GlassCard className="max-h-[90vh] w-full max-w-3xl overflow-hidden bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-xs sm:items-center sm:p-4">
+      <GlassCard className="max-h-[92dvh] w-full max-w-3xl overflow-hidden rounded-b-none bg-white shadow-2xl sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-4 sm:p-5">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pedidos do usuario</p>
             <h2 className="mt-1 text-lg font-bold text-slate-900 line-clamp-1">{user.name}</h2>
@@ -239,7 +239,7 @@ function UserOrdersModal({ user, onClose }: { user: AdminUser; onClose: () => vo
           </button>
         </div>
 
-        <div className="max-h-[calc(90vh-112px)] overflow-y-auto p-5">
+        <div className="max-h-[calc(92dvh-104px)] overflow-y-auto p-4 sm:p-5">
           {ordersQuery.isLoading && (
             <div className="space-y-3">
               <Skeleton className="h-28 w-full rounded-2xl" />
@@ -258,14 +258,14 @@ function UserOrdersModal({ user, onClose }: { user: AdminUser; onClose: () => vo
           <div className="space-y-3">
             {ordersQuery.data?.orders.map((order) => (
               <div key={order.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="font-mono text-xs font-semibold text-slate-500">Pedido #{order.humanReadableId}</p>
                     <time className="mt-1 block text-[11px] text-slate-400">{formatDate(order.createdAt)}</time>
                   </div>
-                  <div className="text-right">
+                  <div className="sm:text-right">
                     <p className="text-base font-extrabold text-slate-900">{currency.format(order.total)}</p>
-                    <div className="mt-1 flex flex-wrap justify-end gap-1.5">
+                    <div className="mt-1 flex flex-wrap gap-1.5 sm:justify-end">
                       <Badge variant={order.paymentStatus === "CONFIRMED" ? "blue" : "amber"}>{paymentLabels[order.paymentStatus] ?? order.paymentStatus}</Badge>
                       <Badge variant="slate">{fulfillmentLabels[order.fulfillmentStatus] ?? order.fulfillmentStatus}</Badge>
                     </div>

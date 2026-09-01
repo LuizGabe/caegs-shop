@@ -77,13 +77,13 @@ export function ProductionBatchesPage() {
   }
 
   return (
-    <section className="grid gap-8 lg:grid-cols-[280px_minmax(0,1fr)]">
+    <section className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
       {/* Batches Sidebar */}
-      <aside className="space-y-4">
+      <aside className="min-w-0 space-y-4">
         <h1 className="text-xl font-bold text-slate-900 tracking-tight">Lotes de Produção</h1>
 
         <form
-          className="flex gap-2"
+          className="grid gap-2 sm:flex lg:grid"
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
@@ -99,7 +99,7 @@ export function ProductionBatchesPage() {
             required
             minLength={2}
             placeholder="Nome do novo lote..."
-            className="min-w-0 flex-1 h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none"
+            className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none sm:h-9 sm:text-xs"
           />
           <Button type="submit" size="sm" variant="primary" isLoading={createBatch.isPending}>
             <Plus size={16} />
@@ -110,7 +110,7 @@ export function ProductionBatchesPage() {
           <p className="text-xs text-rose-700 bg-rose-50 p-2.5 rounded-xl border border-rose-200">{createBatch.error.message}</p>
         )}
 
-        <div className="space-y-2">
+        <div className="max-h-[42svh] space-y-2 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible lg:pr-0">
           {batches.data?.batches.map((batch) => {
             const isSelected = selectedId === batch.id;
             const config = statusConfig[batch.status];
@@ -124,11 +124,11 @@ export function ProductionBatchesPage() {
                     : "bg-white/80 border-slate-200/80 hover:border-slate-300"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-sm text-slate-900">{batch.name}</span>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0 font-semibold text-sm text-slate-900">{batch.name}</span>
                   <Badge variant={config.variant}>{config.label}</Badge>
                 </div>
-                <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
+                <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
                   <span className="font-mono">{batch.code}</span>
                   <span>{batch._count.orders} pedidos</span>
                 </div>
@@ -142,7 +142,7 @@ export function ProductionBatchesPage() {
       </aside>
 
       {/* Detail Area */}
-      <div>
+      <div className="min-w-0">
         {selectedId ? (
           <BatchDetail batchId={selectedId} />
         ) : (
@@ -201,7 +201,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
   const regularNext = next === "READY_FOR_PICKUP" ? null : next;
 
   return (
-    <GlassCard className="p-6 sm:p-8 space-y-6">
+    <GlassCard className="p-4 sm:p-8 space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-5">
         <div>
@@ -214,13 +214,14 @@ function BatchDetail({ batchId }: { batchId: string }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2 lg:flex lg:flex-wrap">
           <Button
             size="sm"
             variant="outline"
             isLoading={exportProduction.isPending}
             onClick={() => exportProduction.mutate()}
             leftIcon={<Download size={16} />}
+            className="w-full lg:w-auto"
           >
             Exportar CSV
           </Button>
@@ -232,6 +233,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
               isLoading={transition.isPending}
               onClick={() => transition.mutate(regularNext)}
               rightIcon={<ArrowRight size={16} />}
+              className="w-full lg:w-auto"
             >
               Avançar para {statusConfig[regularNext].label}
             </Button>
@@ -327,7 +329,7 @@ function PickupEditor({ batch }: { batch: Batch }) {
 
   return (
     <form
-      className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-4"
+      className="space-y-4 rounded-2xl border border-slate-200/80 bg-slate-50 p-4 sm:p-5"
       onSubmit={(event) => {
         event.preventDefault();
         const data = new FormData(event.currentTarget);
@@ -355,7 +357,7 @@ function PickupEditor({ batch }: { batch: Batch }) {
             minLength={2}
             defaultValue={batch.pickupLocation ?? ""}
             placeholder="Ex: Sala 204 - Centro Acadêmico"
-            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none"
+            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none sm:text-xs"
           />
         </div>
 
@@ -367,7 +369,7 @@ function PickupEditor({ batch }: { batch: Batch }) {
             name="date"
             type="date"
             defaultValue={batch.pickupDate ?? ""}
-            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none"
+            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none sm:text-xs"
           />
         </div>
 
@@ -379,7 +381,7 @@ function PickupEditor({ batch }: { batch: Batch }) {
             name="time"
             type="time"
             defaultValue={batch.pickupTime ?? ""}
-            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none"
+            className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none sm:text-xs"
           />
         </div>
 
@@ -392,12 +394,12 @@ function PickupEditor({ batch }: { batch: Batch }) {
             rows={2}
             defaultValue={batch.pickupNotes ?? ""}
             placeholder="Orientações adicionais aos alunos..."
-            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none"
+            className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none sm:text-xs"
           />
         </div>
       </div>
 
-      <Button type="submit" size="sm" variant="primary" isLoading={save.isPending}>
+      <Button type="submit" size="sm" variant="primary" isLoading={save.isPending} className="w-full sm:w-auto">
         {batch.status === "RECEIVED" ? "Disponibilizar Lote para Retirada" : "Atualizar Informações de Retirada"}
       </Button>
 
@@ -443,13 +445,14 @@ function OrderSelector({ batchId }: { batchId: string }) {
         <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider">
           Pedidos Elegíveis sem Lote
         </h3>
-        <div className="flex gap-2">
+        <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2 lg:flex">
           <Button
             size="sm"
             variant="outline"
             disabled={!available.length}
             onClick={() => setSelected(new Set(available.map((order) => order.id)))}
             leftIcon={<CheckSquare size={16} />}
+            className="w-full"
           >
             Selecionar Todos ({available.length})
           </Button>
@@ -458,6 +461,7 @@ function OrderSelector({ batchId }: { batchId: string }) {
             variant="primary"
             disabled={!selected.size || associate.isPending}
             isLoading={associate.isPending}
+            className="w-full"
             onClick={() => associate.mutate()}
           >
             Associar Selecionados ({selected.size})
@@ -467,15 +471,15 @@ function OrderSelector({ batchId }: { batchId: string }) {
 
       {associate.error && <p className="text-xs text-rose-700 bg-rose-50 p-2.5 rounded-xl">{associate.error.message}</p>}
 
-      <div className="divide-y divide-slate-100 rounded-xl bg-slate-50/70 border border-slate-200/60 max-h-60 overflow-y-auto px-4">
+      <div className="divide-y divide-slate-100 rounded-xl bg-slate-50/70 border border-slate-200/60 max-h-72 overflow-y-auto px-3 sm:max-h-60 sm:px-4">
         {eligible.data?.orders.map((order) => (
           <label
             key={order.id}
-            className={`py-2.5 flex items-center justify-between gap-3 text-xs cursor-pointer ${
+            className={`flex min-h-16 cursor-pointer flex-col gap-3 py-3 text-xs sm:flex-row sm:items-center sm:justify-between ${
               order.associated ? "opacity-50 pointer-events-none" : "hover:bg-slate-100/50"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex min-w-0 items-start gap-3">
               <input
                 type="checkbox"
                 checked={order.associated || selected.has(order.id)}
@@ -490,7 +494,7 @@ function OrderSelector({ batchId }: { batchId: string }) {
                 }
                 className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 accent-blue-600"
               />
-              <div>
+              <div className="min-w-0">
                 <span className="font-semibold text-slate-900">{order.user.name}</span>
                 <span className="text-slate-400 font-mono ml-2">#{order.humanReadableId}</span>
                 <p className="text-slate-400 font-mono text-[11px] break-all">Ref: {order.publicId}</p>
@@ -499,7 +503,7 @@ function OrderSelector({ batchId }: { batchId: string }) {
                 </p>
               </div>
             </div>
-            <span className="font-extrabold text-slate-900">{currency.format(order.total)}</span>
+            <span className="font-extrabold text-slate-900 sm:shrink-0">{currency.format(order.total)}</span>
           </label>
         ))}
         {!eligible.isLoading && !eligible.data?.orders.length && (
@@ -519,9 +523,9 @@ function BatchSummary({ summary }: { summary: Batch["summary"] }) {
       <div className="divide-y divide-slate-100 rounded-xl bg-slate-50/70 border border-slate-200/60 p-4 space-y-3">
         {summary.map((product) => (
           <div key={product.productId} className="pt-3 first:pt-0">
-            <div className="flex justify-between items-center text-xs font-bold text-slate-900 mb-2">
-              <span>{product.productName}</span>
-              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md font-extrabold">
+            <div className="mb-2 flex flex-col gap-2 text-xs font-bold text-slate-900 sm:flex-row sm:items-center sm:justify-between">
+              <span className="min-w-0">{product.productName}</span>
+              <span className="w-fit rounded-md bg-blue-100 px-2 py-0.5 font-extrabold text-blue-800">
                 Total: {product.totalQuantity} un
               </span>
             </div>

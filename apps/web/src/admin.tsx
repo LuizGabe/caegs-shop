@@ -76,9 +76,9 @@ export function AdminPage() {
   const products = query.data?.products ?? [];
 
   return (
-    <section className="grid gap-8 lg:grid-cols-[280px_1fr]">
+    <section className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
       {/* Sidebar List */}
-      <aside className="space-y-4">
+      <aside className="min-w-0 space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Produtos</h1>
           <Button
@@ -91,7 +91,7 @@ export function AdminPage() {
           </Button>
         </div>
 
-        <div className="space-y-2">
+        <div className="max-h-[42svh] space-y-2 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible lg:pr-0">
           {products.map((product) => {
             const isSelected = selected?.id === product.id;
             const thumbnail = product.images.find((image) => image.type === "PRODUCT");
@@ -131,10 +131,10 @@ export function AdminPage() {
       </aside>
 
       {/* Main Form */}
-      <div>
-        <GlassCard className="p-6 sm:p-8 space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-bold text-slate-900">
+      <div className="min-w-0">
+        <GlassCard className="p-4 sm:p-8 space-y-6">
+          <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
               {selected ? `Editar: ${selected.name}` : "Novo Produto"}
             </h2>
             {selected && (
@@ -221,7 +221,7 @@ export function AdminPage() {
               </div>
             </div>
 
-            <div className="flex gap-6 py-2">
+            <div className="grid gap-3 py-2 sm:flex sm:gap-6">
               <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
                 <input
                   name="active"
@@ -270,7 +270,7 @@ export function AdminPage() {
             </div>
 
             <div className="pt-2">
-              <Button type="submit" variant="primary" isLoading={isSaving}>
+              <Button type="submit" variant="primary" isLoading={isSaving} className="w-full sm:w-auto">
                 Salvar Produto
               </Button>
             </div>
@@ -357,12 +357,12 @@ function ProductAssets({ product, refresh }: { product: Product; refresh: (produ
     <div className="border-t border-slate-200 pt-6 space-y-6">
       <div>
         <h3 className="font-bold text-slate-900 text-sm uppercase tracking-wider mb-3">Variantes e Tamanhos</h3>
-        <div className="flex gap-2 max-w-md">
+        <div className="grid max-w-md gap-2 sm:flex">
           <input
             value={variant}
             onChange={(e) => setVariant(e.target.value)}
             placeholder="Ex: P, M, G, GG..."
-            className="flex-1 h-9 px-3 rounded-xl border border-slate-200 bg-white text-xs text-slate-900 focus:outline-none"
+            className="h-10 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none sm:h-9 sm:text-xs"
           />
           <Button
             size="sm"
@@ -512,7 +512,7 @@ function ImageGroup({
                   aria-label="Mover imagem para esquerda"
                   disabled={isBusy || index === 0}
                   onClick={() => onMove(image.id, -1)}
-                  className="flex h-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="flex h-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35 sm:h-8"
                 >
                   <ArrowLeft size={14} />
                 </button>
@@ -522,7 +522,7 @@ function ImageGroup({
                   aria-label="Mover imagem para direita"
                   disabled={isBusy || index === images.length - 1}
                   onClick={() => onMove(image.id, 1)}
-                  className="flex h-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35"
+                  className="flex h-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-35 sm:h-8"
                 >
                   <ArrowRight size={14} />
                 </button>
@@ -533,7 +533,7 @@ function ImageGroup({
                     aria-label="Tornar imagem principal"
                     disabled={isBusy || isPrimary}
                     onClick={() => onMakePrimary(image.id)}
-                    className="flex h-8 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-35"
+                    className="flex h-10 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-white hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-35 sm:h-8"
                   >
                     <Star size={14} fill={isPrimary ? "currentColor" : "none"} />
                   </button>
@@ -544,7 +544,7 @@ function ImageGroup({
                   aria-label="Remover imagem"
                   disabled={isBusy}
                   onClick={() => onDelete(image.id)}
-                  className="flex h-8 items-center justify-center rounded-lg text-rose-600 transition-colors hover:bg-rose-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+                  className="flex h-10 items-center justify-center rounded-lg text-rose-600 transition-colors hover:bg-rose-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-35 sm:h-8"
                 >
                   <Trash2 size={14} />
                 </button>

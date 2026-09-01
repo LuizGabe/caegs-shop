@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ShoppingBag, User as UserIcon, Shield, PackageCheck, Store } from "lucide-react";
+import { Home, Menu, PackageCheck, Shield, ShoppingBag, Store, User as UserIcon, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, Route, Routes, Navigate, useLocation } from "react-router";
@@ -22,6 +22,8 @@ const queryClient = new QueryClient();
 
 function Shell() {
   const { data: authData, isLoading: isAuthLoading } = useAuth();
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(() =>
     readCart().reduce((sum, item) => sum + item.quantity, 0)
   );
@@ -38,6 +40,10 @@ function Shell() {
   }, []);
 
   const user = authData?.user;
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // 1. Loading state during auth check
   if (isAuthLoading) {
@@ -88,7 +94,7 @@ function Shell() {
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
       {/* Sticky Glassmorphism Header */}
       <header className="sticky top-0 z-40 glass-nav">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-3 py-3 sm:px-4 sm:py-3.5">
           <Link to="/" className="flex items-center gap-2.5 group">
             <div className="w-10 h-10 rounded-xl bg-white border border-blue-100 overflow-hidden p-0 shadow-xs flex items-center justify-center group-hover:scale-105 transition-transform">
               <img src="/logo-CAES.png" alt="CAES" className="h-full w-full scale-[1.35] object-cover" />
@@ -100,7 +106,7 @@ function Shell() {
           </Link>
 
           {/* Navigation Links */}
-          <nav className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium text-slate-600">
+          <nav className="hidden md:flex items-center gap-2 text-sm font-medium text-slate-600">
             {canPurchase && (
               <NavLink to="/products" icon={<Store size={16} />}>
                 Produtos
@@ -133,8 +139,86 @@ function Shell() {
               <Avatar src={user.avatarUrl} name={user.name} size="sm" />
             </Link>
           </nav>
+
+          <div className="flex items-center gap-1.5 md:hidden">
+            {canPurchase && (
+              <Link
+                to="/cart"
+                className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition-colors active-press hover:bg-slate-100"
+                aria-label={`Carrinho com ${cartCount} itens`}
+              >
+                <ShoppingBag size={21} />
+                {cartCount > 0 && (
+                  <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow-xs">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
+            <Link
+              to="/profile"
+              className="flex h-10 w-10 items-center justify-center rounded-xl transition-colors active-press hover:bg-slate-100"
+              aria-label="Meu perfil"
+            >
+              <Avatar src={user.avatarUrl} name={user.name} size="sm" />
+            </Link>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-700 transition-colors active-press hover:bg-slate-100"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Abrir menu"
+            >
+              <Menu size={22} />
+            </button>
+          </div>
         </div>
       </header>
+
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-slate-900/45 backdrop-blur-xs"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-label="Fechar menu"
+          />
+          <aside className="absolute right-0 top-0 flex h-dvh w-[min(320px,calc(100vw-24px))] flex-col bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4 pt-[max(1rem,env(safe-area-inset-top))]">
+              <div className="flex min-w-0 items-center gap-3">
+                <Avatar src={user.avatarUrl} name={user.name} size="md" />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-slate-900">{user.name}</p>
+                  <p className="truncate font-mono text-[11px] text-slate-500">{user.email}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Fechar menu"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto p-3 text-sm font-semibold text-slate-700">
+              <MobileNavLink to="/" icon={<Home size={18} />}>Início</MobileNavLink>
+              {canPurchase && <MobileNavLink to="/products" icon={<Store size={18} />}>Produtos</MobileNavLink>}
+              <MobileNavLink to="/orders" icon={<PackageCheck size={18} />}>Meus Pedidos</MobileNavLink>
+              <MobileNavLink to="/profile" icon={<UserIcon size={18} />}>Perfil</MobileNavLink>
+              {user.role === "ADMIN" && (
+                <div className="mt-3 border-t border-slate-100 pt-3">
+                  <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Administração</p>
+                  <MobileNavLink to="/admin" icon={<Shield size={18} className="text-indigo-600" />}>Painel</MobileNavLink>
+                  <MobileNavLink to="/admin/products" icon={<Store size={18} />}>Produtos</MobileNavLink>
+                  <MobileNavLink to="/admin/production-batches" icon={<PackageCheck size={18} />}>Lotes</MobileNavLink>
+                  <MobileNavLink to="/admin/users" icon={<UserIcon size={18} />}>Usuários</MobileNavLink>
+                </div>
+              )}
+            </nav>
+          </aside>
+        </div>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 mx-auto max-w-6xl w-full px-4 py-6 sm:py-8">
@@ -205,6 +289,23 @@ function NavLink({
     >
       {icon}
       {children}
+    </Link>
+  );
+}
+
+function MobileNavLink({ to, children, icon }: { to: string; children: React.ReactNode; icon: React.ReactNode }) {
+  const location = useLocation();
+  const isActive = location.pathname === to || (to !== "/" && location.pathname.startsWith(to));
+
+  return (
+    <Link
+      to={to}
+      className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 ${
+        isActive ? "bg-slate-100 text-slate-950" : "text-slate-700 hover:bg-slate-50"
+      }`}
+    >
+      <span className="shrink-0">{icon}</span>
+      <span className="truncate">{children}</span>
     </Link>
   );
 }

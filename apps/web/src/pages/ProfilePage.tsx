@@ -17,7 +17,7 @@ export const ProfilePage: React.FC = () => {
   const course = coursesData?.courses.find((c) => c.id === user.courseId);
 
   return (
-    <div className="max-w-xl mx-auto py-6 px-4">
+    <div className="mx-auto max-w-xl px-0 py-4 sm:px-4 sm:py-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Perfil Institucional</h1>
         <p className="text-xs text-slate-500 mt-1">
@@ -25,21 +25,21 @@ export const ProfilePage: React.FC = () => {
         </p>
       </div>
 
-      <GlassCard className="p-6 sm:p-8">
+      <GlassCard className="p-4 sm:p-8">
         {/* Header Profile Info */}
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 pb-6 border-b border-slate-100">
           <Avatar src={user.avatarUrl} name={user.name} size="xl" className="shadow-md" />
-          <div className="text-center sm:text-left">
+          <div className="min-w-0 text-center sm:text-left">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
+              <h2 className="text-lg font-bold text-slate-900 sm:text-xl">{user.name}</h2>
               {user.role === "ADMIN" && (
                 <Badge variant="indigo" dot>
                   ADMINISTRADOR
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-slate-500 font-mono mt-1">{user.email}</p>
-            <p className="text-[11px] text-slate-400 mt-2 flex items-center justify-center sm:justify-start gap-1">
+            <p className="mt-1 break-all font-mono text-xs text-slate-500">{user.email}</p>
+            <p className="mt-2 flex items-center justify-center gap-1 text-[11px] text-slate-400 sm:justify-start">
               <ShieldAlert size={13} className="text-blue-600" />
               Autenticado via Google Workspace (UNIJUÍ)
             </p>
@@ -53,11 +53,11 @@ export const ProfilePage: React.FC = () => {
               <Mail size={14} className="text-slate-400" />
               E-mail Institucional
             </div>
-            <p className="text-sm font-medium text-slate-800 font-mono">{user.email}</p>
+            <p className="break-all font-mono text-sm font-medium text-slate-800">{user.email}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-50/80 border border-slate-200/70">
-            <div className="flex items-center justify-between mb-1">
+            <div className="mb-1 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 <GraduationCap size={14} className="text-blue-600" />
                 Curso Cadastrado
@@ -95,7 +95,7 @@ export const ProfilePage: React.FC = () => {
             isLoading={logout.isPending}
             onClick={() => logout.mutate()}
             leftIcon={<LogOut size={16} />}
-            className="text-rose-700 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-800"
+            className="w-full text-rose-700 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-800 sm:w-auto"
           >
             Sair da Conta
           </Button>

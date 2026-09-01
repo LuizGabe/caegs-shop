@@ -11,7 +11,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = "", variant = "primary", size = "md", isLoading = false, leftIcon, rightIcon, children, disabled, ...props }, ref) => {
     const baseStyle =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-150 ease-out active-press disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/35";
+      "inline-flex max-w-full items-center justify-center font-medium rounded-xl transition-all duration-150 ease-out active-press disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700/35";
 
     const variantStyles = {
       primary:
@@ -27,7 +27,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     const sizeStyles = {
-      sm: "h-8 px-3 text-xs gap-1.5",
+      sm: "min-h-10 px-3 text-xs gap-1.5 sm:h-8 sm:min-h-0",
       md: "h-10 px-4 text-sm gap-2",
       lg: "h-12 px-6 text-base gap-2.5"
     };
@@ -47,7 +47,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : leftIcon ? (
           <span className="shrink-0">{leftIcon}</span>
         ) : null}
-        <span>{children}</span>
+        {children ? <span className="min-w-0 truncate">{children}</span> : null}
         {!isLoading && rightIcon && <span className="shrink-0">{rightIcon}</span>}
       </button>
     );

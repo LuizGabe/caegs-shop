@@ -101,10 +101,10 @@ export function OrdersPage() {
           };
 
           return (
-            <GlassCard key={order.id} className="p-6 overflow-hidden">
+            <GlassCard key={order.id} className="overflow-hidden p-4 sm:p-6">
               {/* Order Top Bar */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                <div>
+              <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <span className="text-[11px] font-mono text-slate-400 uppercase tracking-wider">
                     Pedido #{order.humanReadableId}
                   </span>
@@ -115,7 +115,7 @@ export function OrdersPage() {
                     </Badge>
                   </div>
                 </div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <p className="text-lg font-extrabold text-slate-900">{currency.format(order.total)}</p>
                   <time className="text-xs text-slate-400 font-mono">
                     {new Date(order.createdAt).toLocaleDateString("pt-BR", {
@@ -130,7 +130,7 @@ export function OrdersPage() {
               {/* Items List */}
               <div className="py-4 space-y-2">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Itens do pedido</p>
-                <div className="divide-y divide-slate-100 rounded-xl bg-slate-50/70 border border-slate-200/60 px-4">
+                <div className="divide-y divide-slate-100 rounded-xl bg-slate-50/70 border border-slate-200/60 px-3 sm:px-4">
                   {order.items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between gap-3 py-2.5 text-xs sm:text-sm">
                       <div className="flex items-center gap-3 min-w-0">
@@ -194,15 +194,15 @@ function PendingPayment({ order }: { order: Order }) {
             Use o QR Code ou o copia e cola para concluir o pedido.
           </p>
         </div>
-        <Link to={`/checkout/${order.publicId}`} className="inline-flex">
-          <Button size="sm" variant="secondary" rightIcon={<ExternalLink size={14} />}>
+        <Link to={`/checkout/${order.publicId}`} className="inline-flex w-full sm:w-auto">
+          <Button size="sm" variant="secondary" rightIcon={<ExternalLink size={14} />} className="w-full sm:w-auto">
             Abrir pagamento
           </Button>
         </Link>
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-[148px_1fr] sm:items-start">
-        <div className="aspect-square rounded-xl border border-amber-200 bg-white p-2 shadow-xs flex items-center justify-center">
+      <div className="mt-4 grid gap-4 sm:grid-cols-[148px_minmax(0,1fr)] sm:items-start">
+        <div className="mx-auto aspect-square w-full max-w-[180px] rounded-xl border border-amber-200 bg-white p-2 shadow-xs flex items-center justify-center sm:max-w-none">
           {payment.pixQrCodeImage ? (
             <img className="h-full w-full object-contain" src={`data:image/png;base64,${payment.pixQrCodeImage}`} alt="QR Code PIX" />
           ) : (
@@ -218,11 +218,11 @@ function PendingPayment({ order }: { order: Order }) {
 
           <div>
             <p className="text-xs font-semibold text-amber-900 uppercase tracking-wider mb-1.5">PIX copia e cola</p>
-            <div className="flex items-stretch gap-1">
+            <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row">
               <textarea
                 readOnly
                 value={pixCode}
-                className="min-h-[68px] flex-1 resize-none rounded-xl border border-amber-200 bg-white/80 p-2.5 text-[11px] font-mono text-slate-700 leading-tight focus:outline-none"
+                className="min-h-[80px] min-w-0 flex-1 resize-none rounded-xl border border-amber-200 bg-white/80 p-2.5 text-[11px] font-mono text-slate-700 leading-tight focus:outline-none"
               />
               <Button
                 type="button"
@@ -278,7 +278,7 @@ function PickupStatus({ pickup }: { pickup: Order["pickup"] }) {
 
       <div className="space-y-2 text-xs text-blue-950">
         {pickup.location && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
             <span className="font-semibold text-blue-800 shrink-0">Local:</span>
             <span className="bg-white/80 px-2.5 py-1 rounded-lg border border-blue-200 font-medium">
               {pickup.location}
@@ -287,7 +287,7 @@ function PickupStatus({ pickup }: { pickup: Order["pickup"] }) {
         )}
 
         {(pickup.date || pickup.time) && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
             <Calendar size={14} className="text-blue-700 shrink-0" />
             <span className="font-semibold text-blue-800 shrink-0">Data/Horário:</span>
             <span className="bg-white/80 px-2.5 py-1 rounded-lg border border-blue-200 font-medium">

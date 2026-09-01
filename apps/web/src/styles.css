@@ -24,9 +24,35 @@ body {
   color: #0f172a;
 }
 
+*, ::before, ::after {
+  box-sizing: border-box;
+}
+
+#root {
+  min-width: 0;
+}
+
+img, video, canvas, svg {
+  max-width: 100%;
+}
+
+p, h1, h2, h3, h4, h5, h6, span, div {
+  overflow-wrap: anywhere;
+}
+
 a {
   text-decoration: none;
   color: inherit;
+}
+
+input, select, textarea, button {
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 }
 
 /* Glassmorphism and Apple Material Utility Classes */

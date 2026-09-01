@@ -112,20 +112,21 @@ export function DashboardPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Link to="/admin/products">
-            <Button variant="outline" size="sm">Gerenciar Produtos</Button>
+        <div className="grid w-full grid-cols-1 gap-2 sm:w-auto sm:grid-cols-2 lg:flex lg:flex-wrap">
+          <Link to="/admin/products" className="min-w-0">
+            <Button variant="outline" size="sm" className="w-full lg:w-auto">Gerenciar Produtos</Button>
           </Link>
-          <Link to="/admin/production-batches">
-            <Button variant="outline" size="sm">Gerenciar Lotes</Button>
+          <Link to="/admin/production-batches" className="min-w-0">
+            <Button variant="outline" size="sm" className="w-full lg:w-auto">Gerenciar Lotes</Button>
           </Link>
-          <Link to="/admin/users">
-            <Button variant="outline" size="sm">Gerenciar Usuários</Button>
+          <Link to="/admin/users" className="min-w-0">
+            <Button variant="outline" size="sm" className="w-full lg:w-auto">Gerenciar Usuários</Button>
           </Link>
           <Button
             variant="primary"
             size="sm"
             leftIcon={<Download size={16} />}
+            className="w-full sm:col-span-2 lg:w-auto"
             onClick={async () => {
               setExportError("");
               try {
@@ -141,8 +142,8 @@ export function DashboardPage() {
       </div>
 
       {/* Email settings banner */}
-      <GlassCard className="p-4 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <GlassCard className="p-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
             <Mail size={18} />
           </div>
@@ -152,7 +153,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <label className="inline-flex items-center gap-3 cursor-pointer text-xs font-semibold text-slate-700">
+        <label className="inline-flex min-h-10 items-center gap-3 cursor-pointer text-xs font-semibold text-slate-700">
           <span>{emailSettings.data?.enabled ? "Ativado" : "Desativado"}</span>
           <input
             type="checkbox"
@@ -183,7 +184,7 @@ export function DashboardPage() {
             </span>
           </div>
         </div>
-        <div className="grid gap-3 lg:grid-cols-[150px_150px_minmax(220px,1fr)_auto] lg:items-end">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[150px_150px_minmax(220px,1fr)_auto] lg:items-end">
           <label className="block">
             <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">De</span>
             <input type="date" value={buyersFrom} onChange={(event) => setBuyersFrom(event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" />
@@ -200,6 +201,7 @@ export function DashboardPage() {
             variant="secondary"
             size="sm"
             leftIcon={<Download size={16} />}
+            className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto"
             disabled={!buyersFrom || !buyersTo || buyersReason.trim().length < 3 || !buyersConfirmed}
             onClick={async () => {
               setExportError("");
@@ -219,7 +221,7 @@ export function DashboardPage() {
             Exportar compradores
           </Button>
         </div>
-        <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+        <label className="inline-flex items-start gap-2 text-xs font-medium text-slate-600">
           <input type="checkbox" checked={buyersConfirmed} onChange={(event) => setBuyersConfirmed(event.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-blue-600" />
           Confirmo que esta exportação contém dados pessoais e será usada apenas para a finalidade informada.
         </label>
@@ -242,17 +244,17 @@ export function DashboardPage() {
 
       {/* Units Breakdown */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <GlassCard className="p-6">
+        <GlassCard className="p-4 sm:p-6">
           <UnitList title="Unidades Vendidas por Produto" items={dashboard.data.unitsByProduct} />
         </GlassCard>
-        <GlassCard className="p-6">
+        <GlassCard className="p-4 sm:p-6">
           <UnitList title="Unidades por Tamanho / Variante" items={dashboard.data.unitsByVariant} />
         </GlassCard>
       </div>
 
       {/* Batches Overview */}
-      <GlassCard className="p-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+      <GlassCard className="p-4 sm:p-6">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 mb-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="font-bold text-slate-900 text-base">Lotes de Produção</h2>
             <p className="text-xs text-slate-500">Resumo da situação dos lotes cadastrados.</p>
@@ -286,7 +288,7 @@ function UnitList({ title, items }: { title: string; items: Array<{ name: string
         {items.map((item, index) => (
           <div key={`${item.name}:${index}`} className="space-y-1">
             <div className="flex justify-between gap-4 text-xs font-medium text-slate-800">
-              <span>{item.name}</span>
+              <span className="min-w-0">{item.name}</span>
               <span className="font-extrabold text-slate-900">{item.quantity} un</span>
             </div>
             <div className="h-2 rounded-full bg-slate-100 overflow-hidden">

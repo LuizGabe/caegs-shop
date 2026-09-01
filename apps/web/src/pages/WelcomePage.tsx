@@ -12,10 +12,10 @@ export const WelcomePage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex flex-col items-center justify-center py-12 px-4">
+    <div className="flex min-h-[calc(100svh-2rem)] flex-col items-center justify-center px-0 py-6 sm:min-h-[85vh] sm:px-4 sm:py-12">
       <div className="w-full max-w-xl text-center">
         {/* Emblem / Identity */}
-        <div className="inline-flex items-center justify-center w-24 h-24 rounded-3xl bg-white shadow-xl shadow-blue-950/10 mb-6 ring-4 ring-white overflow-hidden p-0">
+        <div className="inline-flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl bg-white p-0 shadow-xl shadow-blue-950/10 ring-4 ring-white sm:mb-6 sm:h-24 sm:w-24 mb-4">
           <img src="/logo-CAES.png" alt="Logo CAES" className="h-full w-full scale-[1.35] object-cover" />
         </div>
 
@@ -23,16 +23,16 @@ export const WelcomePage: React.FC = () => {
           UNIJUÍ • Engenharia de Software
         </p>
 
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+        <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
           Bem-vindo à plataforma do Centro Acadêmico
         </h1>
 
-        <p className="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-lg mx-auto">
+        <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-slate-600 sm:mt-4 sm:text-lg">
           Acesse para adquirir os produtos oficiais do curso, acompanhar o status dos seus pedidos e verificar os locais de retirada presencial.
         </p>
 
         {/* Feature Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-8 text-left">
+        <div className="my-6 grid grid-cols-1 gap-3 text-left sm:my-8 sm:grid-cols-3">
           <div className="p-4 rounded-2xl bg-white/80 border border-slate-200/80 shadow-xs">
             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-2.5">
               <ShoppingBag size={18} />

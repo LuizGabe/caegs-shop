@@ -33,17 +33,17 @@ export const OnboardingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center py-8 px-4">
+    <div className="flex min-h-[calc(100svh-2rem)] flex-col items-center justify-center px-0 py-4 sm:min-h-[80vh] sm:px-4 sm:py-8">
       <div className="w-full max-w-xl">
-        <GlassCard className="p-6 sm:p-8">
+        <GlassCard className="p-4 sm:p-8">
           {/* Header & User Info */}
-          <div className="flex flex-col items-center text-center border-b border-slate-100 pb-6 mb-6">
-            <Avatar src={user.avatarUrl} name={user.name} size="xl" className="mb-4 shadow-md" />
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="flex flex-col items-center text-center border-b border-slate-100 pb-5 mb-5 sm:pb-6 sm:mb-6">
+            <Avatar src={user.avatarUrl} name={user.name} size="xl" className="mb-3 shadow-md sm:mb-4" />
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight sm:text-2xl">
               Olá, {user.name.split(" ")[0]} 👋
             </h1>
-            <p className="text-sm font-medium text-slate-700 mt-1">{user.name}</p>
-            <p className="text-xs text-slate-500 font-mono mt-0.5">{user.email}</p>
+            <p className="mt-1 max-w-full text-sm font-medium text-slate-700">{user.name}</p>
+            <p className="mt-0.5 max-w-full break-all font-mono text-xs text-slate-500">{user.email}</p>
           </div>
 
           <div className="mb-6">
@@ -72,12 +72,12 @@ export const OnboardingPage: React.FC = () => {
                     key={course.id}
                     type="button"
                     onClick={() => setSelectedCourseId(course.id)}
-                    className={`w-full text-left p-4 rounded-xl border transition-all duration-150 flex items-center justify-between active-press ${isSelected
+                    className={`w-full min-h-14 text-left p-4 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3 active-press ${isSelected
                         ? "bg-blue-50/80 border-blue-500 ring-2 ring-blue-500/20 shadow-xs"
                         : "bg-white/70 border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/80"
                       }`}
                   >
-                    <div>
+                    <div className="min-w-0">
                       <span className={`block font-medium text-sm ${isSelected ? "text-blue-950" : "text-slate-800"}`}>
                         {course.name}
                       </span>
@@ -126,8 +126,8 @@ export const OnboardingPage: React.FC = () => {
 
       {/* Confirmation Modal */}
       {isConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-150">
-          <GlassCard className="w-full max-w-md p-6 bg-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-0 backdrop-blur-xs animate-in fade-in duration-150 sm:items-center sm:p-4">
+          <GlassCard className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-b-none bg-white p-4 shadow-2xl sm:rounded-2xl sm:p-6">
             <h3 className="text-lg font-bold text-slate-900">Confirmar seleção de curso?</h3>
             <p className="mt-2 text-sm text-slate-600">
               Você está definindo seu curso como: <strong className="text-slate-900 font-semibold">{selectedCourse?.name}</strong>.
@@ -135,7 +135,7 @@ export const OnboardingPage: React.FC = () => {
             <p className="mt-2 text-xs text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
               Esta ação é definitiva e não poderá ser alterada por você posteriormente.
             </p>
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 grid gap-2 sm:flex sm:justify-end sm:gap-3">
               <Button
                 variant="ghost"
                 onClick={() => setIsConfirmModalOpen(false)}

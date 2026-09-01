@@ -26,26 +26,26 @@ export function useProducts() {
 
 export function HomePage() {
   return (
-    <section className="space-y-8">
-      <div className="rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-800 to-slate-900 text-white p-8 sm:p-12 relative overflow-hidden shadow-xl shadow-blue-950/10">
+    <section className="space-y-6 sm:space-y-8">
+      <div className="rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-800 to-slate-900 text-white p-5 sm:p-12 relative overflow-hidden shadow-xl shadow-blue-950/10">
         <div className="absolute right-0 top-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-2xl">
           <Badge variant="blue" className="bg-blue-400/20 text-blue-200 border-blue-400/30 mb-4">
             PRODUTOS OFICIAIS CAES
           </Badge>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-5xl font-extrabold tracking-tight leading-tight">
             Engenharia de Software UNIJUÍ
           </h1>
           <p className="mt-4 text-blue-100/90 text-sm sm:text-base leading-relaxed">
             Camisetas, moletons e acessórios desenvolvidos para os estudantes do curso. Garanta seus itens e acompanhe a produção e retirada.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/products" className="inline-flex w-fit">
+            <Link to="/products" className="inline-flex w-full sm:w-fit">
               <Button
                 variant="primary"
                 size="lg"
                 rightIcon={<ArrowRight size={18} className="shrink-0" />}
-                className="w-max min-w-[280px] bg-blue-500 hover:bg-blue-400 text-slate-950 font-semibold border-none px-10 whitespace-nowrap flex-nowrap [&>span]:whitespace-nowrap"
+                className="w-full sm:w-auto sm:min-w-[280px] bg-blue-500 hover:bg-blue-400 text-slate-950 font-semibold border-none px-6 sm:px-10"
               >
                 Ver todos os produtos
               </Button>
@@ -120,7 +120,7 @@ export function CatalogPage() {
                   </div>
                 )}
               </div>
-              <div className="p-5 flex flex-col flex-1 justify-between">
+              <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between">
                 <div>
                   <h3 className="font-bold text-slate-900 group-hover:text-blue-700 transition-colors">
                     {product.name}
@@ -129,11 +129,11 @@ export function CatalogPage() {
                     {product.description}
                   </p>
                 </div>
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
                   <span className="text-lg font-extrabold text-slate-900">
                     {currency.format(product.salePrice)}
                   </span>
-                  <span className="text-xs font-semibold text-blue-700 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                  <span className="shrink-0 text-xs font-semibold text-blue-700 group-hover:translate-x-1 transition-transform flex items-center gap-1">
                     Ver detalhes <ArrowRight size={14} />
                   </span>
                 </div>
@@ -200,10 +200,10 @@ export function ProductPage() {
   };
 
   return (
-    <section className="grid gap-8 lg:grid-cols-2 items-start">
+    <section className="grid gap-6 lg:grid-cols-2 lg:gap-8 items-start">
       {/* Gallery */}
       <div className="space-y-4">
-        <GlassCard className="aspect-square overflow-hidden rounded-3xl p-2">
+        <GlassCard className="aspect-square max-h-[min(78svh,520px)] overflow-hidden rounded-3xl p-2">
           {photos[imageIndex] ? (
             <img
               className="h-full w-full object-cover rounded-2xl"
@@ -218,7 +218,7 @@ export function ProductPage() {
         </GlassCard>
 
         {photos.length > 1 && (
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          <div className="flex gap-3 overflow-x-auto overscroll-x-contain pb-2">
             {photos.map((item, index) => (
               <button
                 key={item.id}
@@ -236,20 +236,20 @@ export function ProductPage() {
       </div>
 
       {/* Product Information */}
-      <GlassCard className="p-6 sm:p-8 space-y-6">
+      <GlassCard className="p-5 sm:p-8 space-y-6">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <Badge variant="blue">OFICIAL CAES</Badge>
             {sizeGuides.length > 0 && (
               <button
                 onClick={() => setShowSizeGuide(true)}
-                className="text-xs font-semibold text-blue-700 hover:text-blue-800 flex items-center gap-1 underline underline-offset-4"
+                className="min-h-9 rounded-lg px-1 text-xs font-semibold text-blue-700 hover:text-blue-800 flex items-center gap-1 underline underline-offset-4"
               >
                 <Ruler size={14} /> Guia de Medidas
               </button>
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             {product.name}
           </h1>
           <p className="mt-4 whitespace-pre-line text-sm text-slate-600 leading-relaxed">
@@ -259,7 +259,7 @@ export function ProductPage() {
 
         <div className="pt-4 border-t border-slate-100">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Valor unitário</p>
-          <p className="text-3xl font-extrabold text-slate-900 mt-0.5">
+          <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5">
             {currency.format(product.salePrice)}
           </p>
         </div>
@@ -282,7 +282,7 @@ export function ProductPage() {
                     key={item.id}
                     type="button"
                     onClick={() => setVariant(item.id)}
-                    className={`py-3 px-3 rounded-xl border text-xs font-semibold transition-all active-press ${
+                    className={`min-h-11 py-3 px-3 rounded-xl border text-xs font-semibold transition-all active-press ${
                       isSelected
                         ? "bg-blue-700 text-white border-blue-700 shadow-sm"
                         : "bg-white text-slate-800 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
@@ -304,7 +304,7 @@ export function ProductPage() {
           <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50/80 p-1">
             <button
               type="button"
-              className="w-9 h-9 rounded-lg bg-white shadow-xs text-slate-700 flex items-center justify-center active-press hover:bg-slate-100 disabled:opacity-40"
+              className="w-10 h-10 rounded-lg bg-white shadow-xs text-slate-700 flex items-center justify-center active-press hover:bg-slate-100 disabled:opacity-40"
               disabled={quantity <= 1}
               onClick={() => setQuantity(Math.max(1, quantity - 1))}
               aria-label="Diminuir quantidade"
@@ -314,7 +314,7 @@ export function ProductPage() {
             <span className="w-12 text-center text-sm font-bold text-slate-900">{quantity}</span>
             <button
               type="button"
-              className="w-9 h-9 rounded-lg bg-white shadow-xs text-slate-700 flex items-center justify-center active-press hover:bg-slate-100 disabled:opacity-40"
+              className="w-10 h-10 rounded-lg bg-white shadow-xs text-slate-700 flex items-center justify-center active-press hover:bg-slate-100 disabled:opacity-40"
               disabled={quantity >= 20}
               onClick={() => setQuantity(Math.min(20, quantity + 1))}
               aria-label="Aumentar quantidade"
@@ -347,9 +347,9 @@ export function ProductPage() {
 
       {/* Size Guide Modal */}
       {showSizeGuide && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-          <GlassCard className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
+          <GlassCard className="w-full max-w-2xl max-h-[92dvh] overflow-y-auto rounded-b-none bg-white p-4 shadow-2xl sm:rounded-2xl sm:p-6">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4 mb-4">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <Ruler className="text-blue-700" size={20} /> Guia de Medidas
               </h3>
@@ -484,16 +484,16 @@ export function CartPage() {
               <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
                 <button
                   type="button"
-                  className="w-7 h-7 rounded-lg bg-white text-slate-700 flex items-center justify-center active-press hover:bg-slate-100"
+                  className="h-10 w-10 rounded-lg bg-white text-slate-700 flex items-center justify-center active-press hover:bg-slate-100 sm:h-7 sm:w-7"
                   onClick={() => update(items.map((entry) => entry === item ? { ...entry, quantity: Math.max(1, entry.quantity - 1) } : entry))}
                   aria-label="Diminuir"
                 >
                   <Minus size={14} />
                 </button>
-                <span className="w-8 text-center text-xs font-bold text-slate-900">{item.quantity}</span>
+                <span className="w-10 text-center text-sm font-bold text-slate-900 sm:w-8 sm:text-xs">{item.quantity}</span>
                 <button
                   type="button"
-                  className="w-7 h-7 rounded-lg bg-white text-slate-700 flex items-center justify-center active-press hover:bg-slate-100"
+                  className="h-10 w-10 rounded-lg bg-white text-slate-700 flex items-center justify-center active-press hover:bg-slate-100 sm:h-7 sm:w-7"
                   onClick={() => update(items.map((entry) => entry === item ? { ...entry, quantity: Math.min(20, entry.quantity + 1) } : entry))}
                   aria-label="Aumentar"
                 >
@@ -503,7 +503,7 @@ export function CartPage() {
 
               <button
                 type="button"
-                className="text-rose-600 hover:text-rose-800 p-2 rounded-lg hover:bg-rose-50 transition-colors"
+                className="flex h-10 w-10 items-center justify-center rounded-lg text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-800"
                 onClick={() => update(items.filter((entry) => entry !== item))}
                 aria-label="Remover item"
               >
@@ -516,7 +516,7 @@ export function CartPage() {
       </GlassCard>
 
       {/* Checkout Inputs Card */}
-      <GlassCard className="p-6">
+      <GlassCard className="p-4 sm:p-6">
         <div className="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-end">
           <div>
             <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
@@ -534,7 +534,7 @@ export function CartPage() {
             </p>
           </div>
 
-          <div className="flex flex-col sm:items-end gap-3 pt-2 sm:pt-0">
+          <div className="flex flex-col gap-3 pt-2 sm:items-end sm:pt-0">
             <div>
               <p className="text-xs text-slate-400 font-medium sm:text-right">Total a pagar</p>
               <p className="text-2xl font-extrabold text-slate-900">{currency.format(total)}</p>
@@ -546,6 +546,7 @@ export function CartPage() {
               isLoading={busy}
               disabled={cpfCnpj.replace(/\D/g, "").length !== 11}
               onClick={checkout}
+              className="w-full sm:w-auto"
             >
               {busy ? "Gerando PIX..." : "Pagar com PIX"}
             </Button>
@@ -621,16 +622,16 @@ export function PaymentPage() {
 
   return (
     <section className="mx-auto max-w-2xl">
-      <GlassCard className="p-6 sm:p-8 space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-5">
-          <div>
+      <GlassCard className="p-4 sm:p-8 space-y-6">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <span className="text-xs font-mono text-slate-400 uppercase">Pedido #{payment.orderHumanReadableId}</span>
             <p className="mt-1 text-[11px] text-slate-400 font-mono break-all">Referência técnica: {payment.orderPublicId}</p>
             <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
               {paid ? "Pagamento Confirmado!" : "Pague com PIX"}
             </h1>
           </div>
-          <Badge variant={paid ? "blue" : "amber"} dot>
+          <Badge variant={paid ? "blue" : "amber"} dot className="w-fit">
             {paid ? "Pago" : "Aguardando PIX"}
           </Badge>
         </div>
@@ -651,8 +652,8 @@ export function PaymentPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-[240px_1fr] sm:items-center py-2">
-            <div className="aspect-square rounded-2xl border border-slate-200 bg-white p-3 shadow-xs flex items-center justify-center">
+          <div className="grid gap-6 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center py-2">
+            <div className="mx-auto aspect-square w-full max-w-[240px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xs flex items-center justify-center sm:max-w-none">
               {payment.pixQrCodeImage ? (
                 <img className="h-full w-full object-contain" src={`data:image/png;base64,${payment.pixQrCodeImage}`} alt="QR Code PIX" />
               ) : (
@@ -663,16 +664,16 @@ export function PaymentPage() {
             <div className="space-y-4">
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Valor total do PIX</p>
-                <p className="text-3xl font-extrabold text-slate-900 mt-0.5">{currency.format(payment.amount)}</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5">{currency.format(payment.amount)}</p>
               </div>
 
               <div>
                 <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">PIX Copia e Cola</p>
-                <div className="flex items-stretch gap-1">
+                <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row">
                   <textarea
                     readOnly
                     value={payment.pixCopyPasteCode ?? ""}
-                    className="min-h-[72px] flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 text-[11px] font-mono text-slate-700 leading-tight focus:outline-none"
+                    className="min-h-[84px] min-w-0 flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 text-[11px] font-mono text-slate-700 leading-tight focus:outline-none"
                   />
                   <Button
                     type="button"
