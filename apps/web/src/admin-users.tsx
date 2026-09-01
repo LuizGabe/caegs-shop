@@ -1,13 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, GraduationCap, Package, ReceiptText, Save, ShieldAlert, UserRound, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Avatar } from "./components/ui/Avatar";
 import { Badge } from "./components/ui/Badge";
 import { Button } from "./components/ui/Button";
 import { EmptyState } from "./components/ui/EmptyState";
 import { GlassCard } from "./components/ui/GlassCard";
 import { Skeleton } from "./components/ui/Skeleton";
-import { currency, request, useCourses, type AdminUser } from "./lib";
+import { currency, request, useCourses, type AdminUser, type AdminUserDetail } from "./lib";
 
 type AdminUserOrder = {
   id: string;
@@ -152,30 +151,29 @@ function UserCourseRow({
   onSave: (courseId: string) => void;
   onViewOrders: () => void;
 }) {
-  const [courseId, setCourseId] = useState(user.courseId ?? "");
-  const changed = courseId !== (user.courseId ?? "");
+  const currentCourseId = user.course?.id ?? "";
+  const [courseId, setCourseId] = useState(currentCourseId);
+  const changed = courseId !== currentCourseId;
   const canSave = Boolean(courseId) && changed && !isSaving;
 
   useEffect(() => {
-    setCourseId(user.courseId ?? "");
-  }, [user.courseId]);
+    setCourseId(currentCourseId);
+  }, [currentCourseId]);
 
   return (
     <GlassCard className="p-4 sm:p-5">
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px_auto_auto] lg:items-center">
         <div className="flex items-start gap-3 min-w-0">
-          <Avatar src={user.avatarUrl} name={user.name} size="md" />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-bold text-sm text-slate-900 line-clamp-1">{user.name}</h2>
               <Badge variant={user.role === "ADMIN" ? "indigo" : "slate"}>{user.role === "ADMIN" ? "Admin" : "Usuário"}</Badge>
             </div>
-            <p className="mt-1 text-xs text-slate-500 font-mono break-all">{user.email}</p>
             <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-500">
               <span>Cadastrado em {formatDate(user.createdAt)}</span>
-              {user.courseConfirmedAt ? (
+              {user.course ? (
                 <span className="inline-flex items-center gap-1 text-blue-700 font-medium">
-                  <CheckCircle2 size={12} /> Curso confirmado em {formatDate(user.courseConfirmedAt)}
+                  <CheckCircle2 size={12} /> Curso vinculado
                 </span>
               ) : (
                 <span className="text-amber-700 font-medium">Curso ainda não confirmado</span>
@@ -217,10 +215,15 @@ function UserCourseRow({
 }
 
 function UserOrdersModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+  const detailQuery = useQuery({
+    queryKey: ["admin-user-detail", user.id],
+    queryFn: () => request<{ user: AdminUserDetail }>(`/admin/users/${user.id}`)
+  });
   const ordersQuery = useQuery({
     queryKey: ["admin-user-orders", user.id],
     queryFn: () => request<{ orders: AdminUserOrder[] }>(`/admin/users/${user.id}/orders`)
   });
+  const detail = detailQuery.data?.user;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
@@ -229,7 +232,7 @@ function UserOrdersModal({ user, onClose }: { user: AdminUser; onClose: () => vo
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Pedidos do usuario</p>
             <h2 className="mt-1 text-lg font-bold text-slate-900 line-clamp-1">{user.name}</h2>
-            <p className="mt-0.5 break-all font-mono text-xs text-slate-500">{user.email}</p>
+            {detail?.email && <p className="mt-0.5 break-all font-mono text-xs text-slate-500">{detail.email}</p>}
           </div>
           <button type="button" onClick={onClose} className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900" aria-label="Fechar modal de pedidos">
             <X size={18} />

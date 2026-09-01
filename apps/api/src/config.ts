@@ -26,6 +26,13 @@ const envSchema = z.object({
   SESSION_SECRET: z.string().min(32).default(developmentSessionSecret),
   MAX_QUANTITY_PER_ITEM: z.coerce.number().int().positive().default(20),
   MAX_TOTAL_ITEMS_PER_ORDER: z.coerce.number().int().positive().default(50),
+  PRIVACY_SESSION_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
+  PRIVACY_EMAIL_EVENT_RETENTION_DAYS: z.coerce.number().int().positive().default(180),
+  PRIVACY_EMAIL_ERROR_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
+  PRIVACY_WEBHOOK_RETENTION_DAYS: z.coerce.number().int().positive().default(180),
+  PRIVACY_AUDIT_TECH_RETENTION_DAYS: z.coerce.number().int().positive().default(90),
+  PRIVACY_AUDIT_LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(365),
+  PRIVACY_PIX_DATA_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
   TRUST_PROXY: envBoolean.default(false)
 }).superRefine((env, context) => {
   if (env.NODE_ENV === "production" && unsafeProductionSecrets.has(env.SESSION_SECRET)) {

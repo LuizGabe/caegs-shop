@@ -28,7 +28,8 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
     if (!user.courseId || !user.courseConfirmedAt) {
       return reply.status(403).send({ error: { code: "COURSE_REQUIRED", message: "Conclua seu cadastro antes de criar um pedido." } });
     }
-    if (!await prisma.course.findFirst({ where: { id: user.courseId, canPurchase: true } })) {
+    const course = await prisma.course.findFirst({ where: { id: user.courseId, canPurchase: true } });
+    if (!course) {
       return reply.status(403).send({ error: { code: "COURSE_CANNOT_PURCHASE", message: "Seu curso nao esta habilitado para compras." } });
     }
     const order = await prisma.$transaction(async (tx) => {
@@ -41,7 +42,7 @@ export const orderRoutes: FastifyPluginAsync = async (app) => {
       const total = snapshots.reduce((sum, item) => sum.add(item.totalPrice), new Prisma.Decimal(0));
       const orderIdentity = await createHumanReadableOrderFields(tx);
       return tx.order.create({
-        data: { publicId: createPublicOrderId(), ...orderIdentity, userId: user.id, subtotal: total, total, items: { create: snapshots }, statusHistory: { create: { newPaymentStatus: "PENDING", newFulfillmentStatus: "WAITING_PAYMENT", source: "SYSTEM", note: "Pedido criado." } } },
+        data: { publicId: createPublicOrderId(), ...orderIdentity, userId: user.id, courseNameSnapshot: course.name, subtotal: total, total, items: { create: snapshots }, statusHistory: { create: { newPaymentStatus: "PENDING", newFulfillmentStatus: "WAITING_PAYMENT", source: "SYSTEM", note: "Pedido criado." } } },
         include: orderInclude
       });
     });

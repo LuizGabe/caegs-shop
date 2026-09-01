@@ -4,7 +4,7 @@ import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
 import { GlassCard } from "../components/ui/GlassCard";
 import { useAuth, useCourses, useLogout } from "../lib";
-import { GraduationCap, Mail, ShieldAlert, LogOut, Lock } from "lucide-react";
+import { GraduationCap, Mail, ShieldAlert, LogOut, Lock, Database } from "lucide-react";
 
 export const ProfilePage: React.FC = () => {
   const { data: authData } = useAuth();
@@ -72,6 +72,18 @@ export const ProfilePage: React.FC = () => {
             <p className="text-[11px] text-slate-400 mt-1">
               Para alteração de curso, entre em contato com a gestão do Centro Acadêmico.
             </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-blue-50/60 border border-blue-100">
+            <div className="flex items-center gap-2 text-xs font-semibold text-blue-800 uppercase tracking-wider mb-2">
+              <Database size={14} />
+              Privacidade
+            </div>
+            <div className="space-y-2 text-xs leading-relaxed text-slate-600">
+              <p>A plataforma utiliza seu nome, e-mail institucional, curso, pedidos e status de pagamento para operar a loja e as retiradas.</p>
+              <p>Google e usado para autenticacao, Asaas para pagamento PIX e Resend para notificacoes quando ativadas.</p>
+              <p>Para solicitar correcao, revisao ou anonimização de dados, entre em contato com a gestao do Centro Academico.</p>
+            </div>
           </div>
         </div>
 

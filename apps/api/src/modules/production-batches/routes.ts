@@ -54,7 +54,7 @@ export function productionBatchRoutes(emailService: EmailService): FastifyPlugin
   return async (app) => {
   app.get("/admin/production-batches", { preHandler: requireAdmin }, async () => {
     const batches = await prisma.productionBatch.findMany({
-      include: { createdBy: { select: { id: true, name: true, email: true } }, _count: { select: { orders: true } } },
+      include: { createdBy: { select: { id: true, name: true } }, _count: { select: { orders: true } } },
       orderBy: { createdAt: "desc" }
     });
     return { batches };
@@ -136,7 +136,7 @@ export function productionBatchRoutes(emailService: EmailService): FastifyPlugin
       prisma.order.findMany({
         where,
         include: {
-          user: { select: { id: true, name: true, email: true } },
+          user: { select: { id: true, name: true } },
           items: { orderBy: { createdAt: "asc" } },
           productionBatchOrders: { where: { productionBatchId: id }, select: { productionBatchId: true } }
         },

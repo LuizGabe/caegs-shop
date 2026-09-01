@@ -110,11 +110,13 @@ describe("production batches", () => {
     });
     expect(created.statusCode).toBe(201);
     const batchId = created.json().batch.id as string;
+    expect(created.json().batch.createdBy).toEqual({ id: admin.user.id, name: admin.user.name });
 
     const eligible = await app.inject({ method: "GET", url: `/admin/production-batches/${batchId}/eligible-orders`, headers: admin.headers });
     expect(eligible.statusCode).toBe(200);
     expect(eligible.json().orders.map((entry: { id: string }) => entry.id)).toEqual(expect.arrayContaining([firstPaid.id, secondPaid.id]));
     expect(eligible.json().orders.map((entry: { id: string }) => entry.id)).not.toContain(unpaid.id);
+    expect(eligible.json().orders.find((entry: { id: string }) => entry.id === firstPaid.id).user).toEqual({ id: fixture.buyer.id, name: fixture.buyer.name });
 
     const denied = await app.inject({
       method: "PUT",
@@ -131,6 +133,8 @@ describe("production batches", () => {
       payload: { orderIds: [firstPaid.id, secondPaid.id] }
     });
     expect(associated.statusCode).toBe(200);
+    expect(associated.json().batch.createdBy).not.toHaveProperty("email");
+    expect(associated.json().batch.orders[0].user).not.toHaveProperty("email");
     expect(associated.json().batch.summary).toEqual([{
       productId: fixture.product.id,
       productName: fixture.product.name,

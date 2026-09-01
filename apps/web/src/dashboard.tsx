@@ -54,6 +54,10 @@ export function DashboardPage() {
   });
 
   const [exportError, setExportError] = useState("");
+  const [buyersFrom, setBuyersFrom] = useState("");
+  const [buyersTo, setBuyersTo] = useState("");
+  const [buyersReason, setBuyersReason] = useState("");
+  const [buyersConfirmed, setBuyersConfirmed] = useState(false);
 
   if (dashboard.isLoading) {
     return (
@@ -131,7 +135,7 @@ export function DashboardPage() {
               }
             }}
           >
-            Exportar CSV
+            Exportar CSV operacional
           </Button>
         </div>
       </div>
@@ -166,6 +170,60 @@ export function DashboardPage() {
       {exportError && (
         <p className="text-xs text-rose-700 bg-rose-50 p-3 rounded-xl border border-rose-200">{exportError}</p>
       )}
+
+      <GlassCard className="p-4 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+            <ShieldAlert size={18} />
+          </div>
+          <div>
+            <span className="block font-semibold text-sm text-slate-900">Relatorio de compradores</span>
+            <span className="text-xs text-slate-500">
+              Este relatório contém dados pessoais. Utilize apenas para a finalidade informada e evite compartilhamento desnecessário.
+            </span>
+          </div>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-[150px_150px_minmax(220px,1fr)_auto] lg:items-end">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">De</span>
+            <input type="date" value={buyersFrom} onChange={(event) => setBuyersFrom(event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Até</span>
+            <input type="date" value={buyersTo} onChange={(event) => setBuyersTo(event.target.value)} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-slate-500">Motivo</span>
+            <input value={buyersReason} onChange={(event) => setBuyersReason(event.target.value)} maxLength={200} className="h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" placeholder="Organização das retiradas" />
+          </label>
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<Download size={16} />}
+            disabled={!buyersFrom || !buyersTo || buyersReason.trim().length < 3 || !buyersConfirmed}
+            onClick={async () => {
+              setExportError("");
+              try {
+                const query = new URLSearchParams({
+                  from: buyersFrom,
+                  to: buyersTo,
+                  reason: buyersReason.trim(),
+                  confirmPersonalDataExport: "true"
+                });
+                await downloadCsv(`/admin/reports/buyers.csv?${query}`, `compradores-${buyersFrom}-${buyersTo}.csv`);
+              } catch (error) {
+                setExportError((error as Error).message);
+              }
+            }}
+          >
+            Exportar compradores
+          </Button>
+        </div>
+        <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-600">
+          <input type="checkbox" checked={buyersConfirmed} onChange={(event) => setBuyersConfirmed(event.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-blue-600" />
+          Confirmo que esta exportação contém dados pessoais e será usada apenas para a finalidade informada.
+        </label>
+      </GlassCard>
 
       {/* Metrics Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

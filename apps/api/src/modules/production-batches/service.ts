@@ -2,7 +2,7 @@ import type { AuditLog, OrderFulfillmentStatus, Prisma, ProductionBatchStatus } 
 import { createRandomToken } from "../../lib/crypto.js";
 
 export const batchInclude = {
-  createdBy: { select: { id: true, name: true, email: true } },
+  createdBy: { select: { id: true, name: true } },
   orders: {
     orderBy: { createdAt: "asc" },
     include: {
@@ -80,7 +80,7 @@ export function batchForApi(batch: BatchForApiInput, auditLogs: AuditLog[] = [])
       humanReadableId: order.humanReadableId,
       orderNumber: order.orderNumber,
       orderYear: order.orderYear,
-      user: order.user,
+      user: { id: order.user.id, name: order.user.name },
       total: Number(order.total),
       paymentStatus: order.paymentStatus,
       fulfillmentStatus: order.fulfillmentStatus,

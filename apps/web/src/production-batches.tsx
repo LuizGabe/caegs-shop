@@ -10,7 +10,7 @@ import { currency, downloadCsv, request } from "./lib";
 
 type BatchStatus = "DRAFT" | "SENT_TO_PRODUCTION" | "RECEIVED" | "READY_FOR_PICKUP" | "CLOSED";
 type BatchListItem = { id: string; code: string; name: string; status: BatchStatus; createdAt: string; _count: { orders: number } };
-type BatchOrder = { id: string; publicId: string; humanReadableId: string; orderNumber: number; orderYear: number; user: { name: string; email: string }; total: number; fulfillmentStatus: string; items: Array<{ id: string; productName: string; variantName: string; quantity: number }> };
+type BatchOrder = { id: string; publicId: string; humanReadableId: string; orderNumber: number; orderYear: number; user: { name: string }; total: number; fulfillmentStatus: string; items: Array<{ id: string; productName: string; variantName: string; quantity: number }> };
 type Batch = BatchListItem & {
   notes: string | null;
   pickupLocation: string | null;
@@ -22,7 +22,7 @@ type Batch = BatchListItem & {
   summary: Array<{ productId: string; productName: string; totalQuantity: number; variants: Array<{ productVariantId: string; variantName: string; quantity: number }> }>;
   auditLogs: Array<{ id: string; action: string; metadata: Record<string, unknown>; createdAt: string }>;
 };
-type EligibleOrder = { id: string; publicId: string; humanReadableId: string; orderNumber: number; orderYear: number; user: { name: string; email: string }; total: number; associated: boolean; items: Array<{ productName: string; variantName: string; quantity: number }> };
+type EligibleOrder = { id: string; publicId: string; humanReadableId: string; orderNumber: number; orderYear: number; user: { name: string }; total: number; associated: boolean; items: Array<{ productName: string; variantName: string; quantity: number }> };
 
 const statusConfig: Record<BatchStatus, { label: string; variant: BadgeProps["variant"] }> = {
   DRAFT: { label: "Rascunho", variant: "slate" },

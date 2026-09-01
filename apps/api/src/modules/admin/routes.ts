@@ -50,8 +50,30 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       select: {
         id: true,
         name: true,
+        role: true,
+        createdAt: true,
+        course: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            canPurchase: true
+          }
+        }
+      }
+    });
+
+    return { users };
+  });
+
+  app.get("/admin/users/:userId", { preHandler: requireAdmin }, async (request, reply) => {
+    const params = updateUserCourseParamsSchema.parse(request.params);
+    const user = await prisma.user.findFirst({
+      where: { id: params.userId, deletedAt: null },
+      select: {
+        id: true,
+        name: true,
         email: true,
-        avatarUrl: true,
         role: true,
         courseId: true,
         courseConfirmedAt: true,
@@ -67,7 +89,11 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       }
     });
 
-    return { users };
+    if (!user) {
+      return reply.status(404).send({ error: { code: "USER_NOT_FOUND", message: "Usuario nao encontrado." } });
+    }
+
+    return { user };
   });
 
   app.get("/admin/users/:userId/orders", { preHandler: requireAdmin }, async (request, reply) => {
@@ -112,7 +138,20 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
       const updated = await tx.user.update({
         where: { id: params.userId },
         data: { courseId: course.id, courseConfirmedAt: new Date() },
-        include: { course: true }
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          createdAt: true,
+          course: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              canPurchase: true
+            }
+          }
+        }
       });
       await tx.auditLog.create({ data: {
         actorUserId: actorUser.id,

@@ -67,9 +67,15 @@ export type Course = {
   canPurchase: boolean;
 };
 
-export type AdminUser = AuthUser & {
+export type AdminUser = Pick<AuthUser, "id" | "name" | "role"> & {
   createdAt: string;
   course: Course | null;
+};
+
+export type AdminUserDetail = AdminUser & {
+  email: string;
+  courseId?: string | null;
+  courseConfirmedAt?: string | null;
 };
 
 export function useAuth() {

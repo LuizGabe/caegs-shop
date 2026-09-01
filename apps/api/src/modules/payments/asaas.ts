@@ -55,7 +55,7 @@ export class AsaasPaymentProvider implements PaymentProvider {
     const body = await response.json().catch(() => null) as unknown;
     if (!response.ok) {
       const description = extractAsaasError(body);
-      throw new PaymentProviderError(`Asaas recusou a operacao: ${description}`);
+      throw new PaymentProviderError(`Asaas recusou a operacao: ${redactCpfCnpj(description)}`);
     }
 
     return body as T;
@@ -165,4 +165,8 @@ function extractAsaasError(body: unknown) {
     return typeof error.description === "string" ? [error.description] : [];
   });
   return descriptions.join("; ") || "erro nao informado";
+}
+
+function redactCpfCnpj(value: string) {
+  return value.replace(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/g, "[cpf-redacted]").replace(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/g, "[cnpj-redacted]");
 }

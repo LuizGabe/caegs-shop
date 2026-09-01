@@ -55,7 +55,8 @@ export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
           idempotencyKey,
           user,
           input,
-          cpfCnpj
+          cpfCnpj,
+          courseNameSnapshot: course.name
         });
       }
 
@@ -110,6 +111,7 @@ async function createAtomicPixCheckout(
     user: AuthenticatedUser;
     input: CheckoutInput;
     cpfCnpj: string;
+    courseNameSnapshot: string;
   }
 ) {
   const snapshots = await checkoutSnapshots(params.input);
@@ -135,6 +137,7 @@ async function createAtomicPixCheckout(
           publicId: createPublicOrderId(),
           ...orderIdentity,
           userId: params.user.id,
+          courseNameSnapshot: params.courseNameSnapshot,
           subtotal: total,
           total,
           items: { create: snapshots },

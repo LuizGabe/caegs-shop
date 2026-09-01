@@ -68,13 +68,14 @@ enum ProductionBatchStatus {
 
 model User {
   id                String    @id @default(cuid())
-  googleSubject     String    @unique
+  googleSubject     String?   @unique
   name              String
   email             String    @unique
   avatarUrl         String?
   role              UserRole  @default(USER)
   courseId          String?
   courseConfirmedAt DateTime?
+  anonymizedAt      DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
@@ -201,6 +202,7 @@ model Order {
   userId             String
   paymentStatus      PaymentStatus          @default(PENDING)
   fulfillmentStatus  OrderFulfillmentStatus @default(WAITING_PAYMENT)
+  courseNameSnapshot String?
   subtotal           Decimal                @db.Decimal(12, 2)
   total              Decimal                @db.Decimal(12, 2)
   cancelledAt        DateTime?

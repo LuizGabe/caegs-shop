@@ -90,6 +90,40 @@ async function orderForUser(userId: string) {
 }
 
 describe("admin user order summaries", () => {
+  it("minimizes the admin user list and exposes details only to admins", async () => {
+    const app = buildApp();
+    const buyer = await session();
+    const admin = await session("ADMIN");
+
+    const listed = await app.inject({ method: "GET", url: "/admin/users", headers: admin.headers });
+    expect(listed.statusCode).toBe(200);
+    const listedUser = listed.json().users.find((entry: { id: string }) => entry.id === buyer.user.id);
+    expect(listedUser).toMatchObject({
+      id: buyer.user.id,
+      name: buyer.user.name,
+      role: "USER",
+      createdAt: expect.any(String)
+    });
+    expect(listedUser).not.toHaveProperty("email");
+    expect(listedUser).not.toHaveProperty("avatarUrl");
+    expect(listedUser).not.toHaveProperty("googleSubject");
+    expect(listedUser).not.toHaveProperty("courseId");
+    expect(listedUser).not.toHaveProperty("courseConfirmedAt");
+
+    const detail = await app.inject({ method: "GET", url: `/admin/users/${buyer.user.id}`, headers: admin.headers });
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().user).toMatchObject({
+      id: buyer.user.id,
+      email: buyer.user.email
+    });
+    expect(detail.json().user).not.toHaveProperty("avatarUrl");
+    expect(detail.json().user).not.toHaveProperty("googleSubject");
+
+    const denied = await app.inject({ method: "GET", url: `/admin/users/${buyer.user.id}`, headers: buyer.headers });
+    expect(denied.statusCode).toBe(403);
+    await app.close();
+  });
+
   it("exposes pending pix data to buyers and individual order summaries to admins", async () => {
     const app = buildApp();
     const buyer = await session();

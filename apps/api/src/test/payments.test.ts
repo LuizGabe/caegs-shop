@@ -13,6 +13,7 @@ for (const line of env.split(/\r?\n/)) {
 const { buildApp } = await import("../app.js");
 const { prisma } = await import("../plugins/prisma.js");
 const { createRandomToken, hashToken } = await import("../lib/crypto.js");
+const { AsaasPaymentProvider } = await import("../modules/payments/asaas.js");
 import type { PaymentProvider } from "../modules/payments/provider.js";
 
 async function session(canPurchase = true) {
@@ -39,7 +40,7 @@ async function session(canPurchase = true) {
   await prisma.session.create({
     data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(Date.now() + 60_000) }
   });
-  return { user, cookie: `ca_session=${token}` };
+  return { user, course, cookie: `ca_session=${token}` };
 }
 
 async function product() {
@@ -76,6 +77,27 @@ function provider() {
 }
 
 describe("PIX checkout", () => {
+  it("redacts CPF/CNPJ from Asaas error messages", async () => {
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ errors: [{ description: "CPF 249.715.637-92 invalido" }] }), { status: 400 })) as typeof fetch;
+    try {
+      const paymentProvider = new AsaasPaymentProvider("asaas-key", "sandbox");
+      await paymentProvider.createPixPayment({
+        externalReference: "privacy-test",
+        customer: { id: "user-id", name: "Buyer", email: "buyer@sou.unijui.edu.br", cpfCnpj: "24971563792" },
+        amount: 10,
+        description: "Pedido",
+        dueDate: "2026-09-01"
+      });
+      throw new Error("Expected AsaasPaymentProvider to reject.");
+    } catch (error) {
+      expect((error as Error).message).toContain("[cpf-redacted]");
+      expect((error as Error).message).not.toContain("249.715.637-92");
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
   it("creates a single order and charge for repeated idempotency keys", async () => {
     const paymentProvider = provider();
     const app = buildApp({ paymentProvider });
@@ -99,6 +121,7 @@ describe("PIX checkout", () => {
     expect(second.json().order.publicId).toBe(first.json().order.publicId);
     expect(first.json().order.humanReadableId).toMatch(/^\d{4,}\.\d{4}$/);
     expect(second.json().order.humanReadableId).toBe(first.json().order.humanReadableId);
+    expect(first.json().order.courseNameSnapshot).toBe(buyer.course.name);
     expect(second.json().payment.orderHumanReadableId).toBe(first.json().order.humanReadableId);
     const [firstNumber, firstYear] = first.json().order.humanReadableId.split(".").map(Number);
     const [thirdNumber, thirdYear] = third.json().order.humanReadableId.split(".").map(Number);

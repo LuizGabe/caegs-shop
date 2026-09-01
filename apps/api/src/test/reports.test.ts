@@ -133,10 +133,54 @@ describe("administrative reports", () => {
     const orders = await app.inject({ method: "GET", url: "/admin/reports/orders.csv", headers: admin.headers });
     expect(orders.statusCode).toBe(200);
     expect(orders.body.charCodeAt(0)).toBe(0xfeff);
-    expect(orders.body).toContain('"\'=HYPERLINK(""https://example.invalid"")"');
-    expect(orders.body).toContain(`"'+report-${suffix}@sou.unijui.edu.br"`);
-    expect(orders.body).toContain('"\'@Curso, Especial"');
+    expect(orders.body).toContain('"Pedido","Produto","Tamanho","Quantidade","Status","Lote","Data","Valor"');
+    expect(orders.body).not.toContain(buyer.name);
+    expect(orders.body).not.toContain(buyer.email);
+    expect(orders.body).not.toContain(course.name);
     expect(orders.body).not.toContain("CPF");
+
+    const buyersForbidden = await app.inject({
+      method: "GET",
+      url: "/admin/reports/buyers.csv?from=2026-01-01&to=2026-12-31&confirmPersonalDataExport=true&reason=Organizacao%20das%20retiradas",
+      headers: buyerSession.headers
+    });
+    expect(buyersForbidden.statusCode).toBe(403);
+
+    const buyersMissingPeriod = await app.inject({
+      method: "GET",
+      url: "/admin/reports/buyers.csv?confirmPersonalDataExport=true&reason=Organizacao%20das%20retiradas",
+      headers: admin.headers
+    });
+    expect(buyersMissingPeriod.statusCode).toBe(400);
+
+    const buyersMissingConfirmation = await app.inject({
+      method: "GET",
+      url: "/admin/reports/buyers.csv?from=2026-01-01&to=2026-12-31&reason=Organizacao%20das%20retiradas",
+      headers: admin.headers
+    });
+    expect(buyersMissingConfirmation.statusCode).toBe(400);
+
+    const buyersMissingReason = await app.inject({
+      method: "GET",
+      url: "/admin/reports/buyers.csv?from=2026-01-01&to=2026-12-31&confirmPersonalDataExport=true&reason=ok",
+      headers: admin.headers
+    });
+    expect(buyersMissingReason.statusCode).toBe(400);
+
+    const buyers = await app.inject({
+      method: "GET",
+      url: "/admin/reports/buyers.csv?from=2026-01-01&to=2026-12-31&confirmPersonalDataExport=true&reason=Organizacao%20das%20retiradas",
+      headers: admin.headers
+    });
+    expect(buyers.statusCode).toBe(200);
+    expect(buyers.body).toContain('"Nome","Email","Curso","Pedido","Produto","Quantidade","Status","Data"');
+    expect(buyers.body).toContain('"\'=HYPERLINK(""https://example.invalid"")"');
+    expect(buyers.body).toContain(`"'+report-${suffix}@sou.unijui.edu.br"`);
+    expect(buyers.body).toContain('"\'@Curso, Especial"');
+    const exportAudit = await prisma.auditLog.findFirstOrThrow({ where: { actorUserId: admin.user.id, action: "PERSONAL_DATA_EXPORT" }, orderBy: { createdAt: "desc" } });
+    expect(exportAudit.metadata).toMatchObject({ from: "2026-01-01", to: "2026-12-31", reason: "Organizacao das retiradas", rowCount: expect.any(Number) });
+    expect(JSON.stringify(exportAudit.metadata)).not.toContain(buyer.email);
+    expect(JSON.stringify(exportAudit.metadata)).not.toContain(buyer.name);
 
     const dashboard = await app.inject({ method: "GET", url: "/admin/dashboard", headers: admin.headers });
     expect(dashboard.statusCode).toBe(200);
@@ -146,7 +190,7 @@ describe("administrative reports", () => {
     expect(data.unitsByVariant).toContainEqual({ name: sizeName, quantity: 5 });
     expect(data.metrics.confirmedValue).toBeLessThan(999999);
     expect(data.metrics.batches).toBeGreaterThanOrEqual(1);
-    expect(await prisma.auditLog.count({ where: { actorUserId: admin.user.id, action: { in: ["PRODUCTION_CSV_EXPORTED", "ORDERS_CSV_EXPORTED"] } } })).toBe(2);
+    expect(await prisma.auditLog.count({ where: { actorUserId: admin.user.id, action: { in: ["PRODUCTION_CSV_EXPORTED", "ORDERS_CSV_EXPORTED", "PERSONAL_DATA_EXPORT"] } } })).toBe(3);
     await app.close();
   });
 });

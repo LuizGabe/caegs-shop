@@ -15,6 +15,8 @@ The first release focuses on institutional Google sign-in, course eligibility, p
 - Email: Resend integration prepared, globally disabled by default
 - Runtime: Docker and Docker Compose, reverse-proxy ready for Nginx and Cloudflare
 
+Privacy and retention notes are documented in [docs/privacy-and-retention.md](docs/privacy-and-retention.md).
+
 ## Project Structure
 
 ```text
@@ -79,10 +81,20 @@ GRANT ALL PRIVILEGES ON DATABASE caegs_shop TO caegs_shop;
 Then deploy:
 
 ```sh
-docker compose -f docker-compose.prod.yml up -d --build
+mkdir -p backups
+DATABASE_URL="$(sed -n 's/^DATABASE_URL=//p' .env.production | tail -n 1 | tr -d '\r')"
+docker run --rm --network db -v "$PWD/backups:/backups" postgres:16-alpine \
+  pg_dump "${DATABASE_URL%%\?*}" --format=custom --no-owner --no-privileges \
+  --file="/backups/caegs-shop-pre-migrate-$(date -u +%Y%m%dT%H%M%SZ).dump"
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm --no-deps api pnpm db:deploy
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+curl -fsS http://10.0.2.10:8080/health
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=100 api
 ```
+
+The production deploy order is backup, build, `pnpm db:deploy` (`prisma migrate deploy`), service restart, then healthcheck. If the migration command fails, stop before `up -d`; do not use `prisma db push` or `prisma migrate reset` in production.
 
 The edge nginx server block should proxy `caegs-shop.luizgabe.dev.br` to `http://10.0.2.10:8080`. Google OAuth must allow this redirect URI:
 
