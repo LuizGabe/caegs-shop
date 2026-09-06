@@ -130,7 +130,8 @@ describe("pending payment reminders", () => {
     expect(notify).toHaveBeenLastCalledWith(expect.objectContaining({
       type: "PAYMENT_PENDING_REMINDER",
       to: admin.user.email,
-      userId: admin.user.id
+      userId: admin.user.id,
+      name: buyer.user.name
     }));
     await app.close();
   });

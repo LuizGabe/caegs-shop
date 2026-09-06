@@ -127,7 +127,7 @@ export function adminRoutes(emailService: EmailService): FastifyPluginAsync {
       userId: admin.id,
       orderId: order.id,
       to: admin.email,
-      name: admin.name,
+      name: order.user.name,
       orderPublicId: order.publicId,
       orderHumanReadableId: order.humanReadableId,
       pixExpiresAt: payment?.pixExpiresAt ?? null
