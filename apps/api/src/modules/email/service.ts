@@ -12,6 +12,7 @@ export type EmailNotification = {
   name: string;
   orderPublicId: string;
   orderHumanReadableId?: string | null;
+  pixExpiresAt?: string | Date | null;
   pickupLocation?: string | null;
   pickupNotes?: string | null;
   pickupDate?: string | null;

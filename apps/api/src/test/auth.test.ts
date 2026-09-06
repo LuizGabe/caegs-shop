@@ -118,6 +118,36 @@ describe("auth and authorization routes", () => {
     expect(JSON.stringify(response.headers["set-cookie"])).toContain("ca_session=");
   });
 
+  it("auto-confirms software engineering for unijui.edu.br accounts", async () => {
+    const email = `prof-${createRandomToken(6)}@unijui.edu.br`;
+    const request = authCallbackUrl(email);
+    const app = buildApp({ authProvider: request.authProvider });
+
+    const response = await app.inject({ method: request.method, url: request.url, headers: request.headers });
+    await app.close();
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { googleSubject: `google-${email}` }, include: { course: true } });
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe(process.env.FRONTEND_URL + "/");
+    expect(user.course?.slug).toBe("engenharia-de-software");
+    expect(user.courseConfirmedAt).not.toBeNull();
+  });
+
+  it("keeps sou.unijui.edu.br accounts in profile completion", async () => {
+    const email = `student-${createRandomToken(6)}@sou.unijui.edu.br`;
+    const request = authCallbackUrl(email);
+    const app = buildApp({ authProvider: request.authProvider });
+
+    const response = await app.inject({ method: request.method, url: request.url, headers: request.headers });
+    await app.close();
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { googleSubject: `google-${email}` } });
+    expect(response.statusCode).toBe(302);
+    expect(response.headers.location).toBe(process.env.FRONTEND_URL + "/profile");
+    expect(user.courseId).toBeNull();
+    expect(user.courseConfirmedAt).toBeNull();
+  });
+
   it("rejects a Google callback with a non-institutional email", async () => {
     const request = authCallbackUrl(`blocked-${createRandomToken(6)}@gmail.com`);
     const app = buildApp({ authProvider: request.authProvider });

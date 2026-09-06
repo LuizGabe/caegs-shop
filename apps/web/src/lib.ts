@@ -137,6 +137,37 @@ export type Product = {
   images: ProductImage[];
 };
 
+export type OrderItemSummary = {
+  id: string;
+  productNameSnapshot: string;
+  variantNameSnapshot: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+};
+
+export type AdminPendingPaymentOrder = {
+  id: string;
+  publicId: string;
+  humanReadableId: string;
+  createdAt: string;
+  paymentStatus: string;
+  fulfillmentStatus: string;
+  total: number;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  items: OrderItemSummary[];
+  payment: {
+    id: string;
+    status: string;
+    amount: number;
+    pixExpiresAt: string | null;
+  } | null;
+};
+
 export type CartItem = { productId: string; productVariantId: string; quantity: number };
 const cartKey = "ca-cart";
 const checkoutKey = "ca-checkout-idempotency";

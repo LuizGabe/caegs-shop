@@ -116,6 +116,9 @@ export function DashboardPage() {
           <Link to="/admin/products" className="min-w-0">
             <Button variant="outline" size="sm" className="w-full lg:w-auto">Gerenciar Produtos</Button>
           </Link>
+          <Link to="/admin/pending-payments" className="min-w-0">
+            <Button variant="outline" size="sm" className="w-full lg:w-auto">PIX pendentes</Button>
+          </Link>
           <Link to="/admin/production-batches" className="min-w-0">
             <Button variant="outline" size="sm" className="w-full lg:w-auto">Gerenciar Lotes</Button>
           </Link>

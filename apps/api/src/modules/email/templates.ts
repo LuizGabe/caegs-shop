@@ -1,10 +1,11 @@
-export type EmailNotificationType = "PAYMENT_CONFIRMED" | "ORDER_SENT_TO_PRODUCTION" | "ORDER_READY_FOR_PICKUP" | "ORDER_CANCELLED" | "PAYMENT_REFUNDED";
+export type EmailNotificationType = "PAYMENT_CONFIRMED" | "PAYMENT_PENDING_REMINDER" | "ORDER_SENT_TO_PRODUCTION" | "ORDER_READY_FOR_PICKUP" | "ORDER_CANCELLED" | "PAYMENT_REFUNDED";
 
 export type EmailTemplateInput = {
   type: EmailNotificationType;
   name: string;
   orderPublicId: string;
   orderHumanReadableId?: string | null;
+  pixExpiresAt?: string | Date | null;
   pickupLocation?: string | null;
   pickupNotes?: string | null;
   pickupDate?: string | null;
@@ -28,7 +29,7 @@ export function renderEmail(input: EmailTemplateInput) {
   const orderHumanReadableId = escapeHtml(input.orderHumanReadableId ?? input.orderPublicId);
   const displayOrder = `#${orderHumanReadableId}`;
   const copy = templateCopy(input.type, displayOrder);
-  const details = pickupDetails(input);
+  const details = input.type === "PAYMENT_PENDING_REMINDER" ? pixDetails(input.pixExpiresAt) : pickupDetails(input);
 
   return {
     subject: copy.subject,
@@ -100,6 +101,16 @@ function templateCopy(type: EmailNotificationType, displayOrder: string): Templa
       badgeBg: "#dbeafe",
       badgeText: "#1d4ed8"
     },
+    PAYMENT_PENDING_REMINDER: {
+      subject: `Pagamento pendente - pedido ${displayOrder}`,
+      eyebrow: "Pagamento pendente",
+      title: "Seu PIX ainda esta aguardando pagamento",
+      message: `O pedido <strong style="color:#0f172a;">${escapeHtml(displayOrder)}</strong> ainda nao teve o pagamento PIX confirmado. Para manter seu pedido ativo, realize o pagamento ate a data de vencimento informada abaixo.`,
+      badge: "Aguardando PIX",
+      accent: "#d97706",
+      badgeBg: "#fef3c7",
+      badgeText: "#92400e"
+    },
     ORDER_SENT_TO_PRODUCTION: {
       subject: `Pedido ${displayOrder} enviado para produção`,
       eyebrow: "Produção iniciada",
@@ -142,6 +153,23 @@ function templateCopy(type: EmailNotificationType, displayOrder: string): Templa
     }
   };
   return templates[type];
+}
+
+function pixDetails(pixExpiresAt: string | Date | null | undefined) {
+  const value = formatPixExpiration(pixExpiresAt);
+  return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:18px;border:1px solid #fde68a;border-radius:18px;background:#fffbeb;">
+    <tr><td style="padding:16px 18px;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:#b45309;font-weight:900;margin-bottom:8px;">Vencimento do PIX</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">${detailRow("Data", value)}</table>
+    </td></tr>
+  </table>`;
+}
+
+function formatPixExpiration(value: string | Date | null | undefined) {
+  if (!value) return "Nao informado";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Nao informado";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(date);
 }
 
 function pickupDetails(input: EmailTemplateInput) {

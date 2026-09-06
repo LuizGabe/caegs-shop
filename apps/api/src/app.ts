@@ -122,7 +122,7 @@ export function buildApp(options: BuildAppOptions = {}) {
 
   app.register(authRoutes(options.authProvider ?? createGoogleAuthProvider()));
   app.register(courseRoutes);
-  app.register(adminRoutes);
+  app.register(adminRoutes(emailService));
   app.register(productRoutes);
   app.register(orderRoutes);
   app.register(paymentRoutes(paymentProvider));

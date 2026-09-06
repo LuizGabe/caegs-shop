@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Home, Menu, PackageCheck, Shield, ShoppingBag, Store, User as UserIcon, X } from "lucide-react";
+import { Clock3, Home, Menu, PackageCheck, Shield, ShoppingBag, Store, User as UserIcon, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Link, Route, Routes, Navigate, useLocation } from "react-router";
@@ -8,6 +8,7 @@ import { AdminUsersPage } from "./admin-users";
 import { DashboardPage } from "./dashboard";
 import { readCart, useAuth } from "./lib";
 import { OrdersPage } from "./orders";
+import { PendingPaymentsPage } from "./pending-payments";
 import { OnboardingPage } from "./pages/OnboardingPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { WelcomePage } from "./pages/WelcomePage";
@@ -211,6 +212,7 @@ function Shell() {
                   <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">Administração</p>
                   <MobileNavLink to="/admin" icon={<Shield size={18} className="text-indigo-600" />}>Painel</MobileNavLink>
                   <MobileNavLink to="/admin/products" icon={<Store size={18} />}>Produtos</MobileNavLink>
+                  <MobileNavLink to="/admin/pending-payments" icon={<Clock3 size={18} />}>PIX pendentes</MobileNavLink>
                   <MobileNavLink to="/admin/production-batches" icon={<PackageCheck size={18} />}>Lotes</MobileNavLink>
                   <MobileNavLink to="/admin/users" icon={<UserIcon size={18} />}>Usuários</MobileNavLink>
                 </div>
@@ -236,6 +238,7 @@ function Shell() {
             <>
               <Route path="/admin" element={<DashboardPage />} />
               <Route path="/admin/products" element={<AdminPage />} />
+              <Route path="/admin/pending-payments" element={<PendingPaymentsPage />} />
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/production-batches" element={<ProductionBatchesPage />} />
             </>

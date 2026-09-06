@@ -20,6 +20,7 @@ const profileSchema = z.object({
 });
 
 const sessionDurationMs = 1000 * 60 * 60 * 24 * 14;
+const softwareEngineeringCourseSlug = "engenharia-de-software";
 
 function publicUser(user: Awaited<ReturnType<typeof getAuthenticatedUser>>) {
   if (!user) {
@@ -73,20 +74,32 @@ export function authRoutes(authProvider: GoogleAuthProvider): FastifyPluginAsync
         });
       }
 
+      const normalizedEmail = identity.email.trim().toLowerCase();
+      const emailDomain = normalizedEmail.split("@").at(1);
+      const automaticCourse = emailDomain === "unijui.edu.br"
+        ? await prisma.course.findFirst({ where: { slug: softwareEngineeringCourseSlug, deletedAt: null } })
+        : null;
+
+      if (emailDomain === "unijui.edu.br" && !automaticCourse) {
+        throw Object.assign(new Error("Curso Engenharia de Software nao encontrado para vinculacao automatica."), { statusCode: 500 });
+      }
+
       const userAvatarData = identity.avatarUrl ? { avatarUrl: identity.avatarUrl } : {};
       const user = await prisma.user.upsert({
         where: { googleSubject: identity.googleSubject },
         update: {
           name: identity.name,
-          email: identity.email,
+          email: normalizedEmail,
           ...userAvatarData,
-          deletedAt: null
+          deletedAt: null,
+          ...(automaticCourse ? { courseId: automaticCourse.id, courseConfirmedAt: new Date() } : {})
         },
         create: {
           googleSubject: identity.googleSubject,
           name: identity.name,
-          email: identity.email,
-          ...userAvatarData
+          email: normalizedEmail,
+          ...userAvatarData,
+          ...(automaticCourse ? { courseId: automaticCourse.id, courseConfirmedAt: new Date() } : {})
         }
       });
 
