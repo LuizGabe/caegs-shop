@@ -7,6 +7,9 @@ loadEnv({ path: fileURLToPath(new URL("../../../.env", import.meta.url)), quiet:
 const developmentSessionSecret = "development-session-secret-change-before-production";
 const unsafeProductionSecrets = new Set([developmentSessionSecret, "replace-with-a-long-random-secret"]);
 const envBoolean = z.preprocess((value) => value === "true" ? true : value === "false" ? false : value, z.boolean());
+const optionalEnvString = z.preprocess((value) => value === "" ? undefined : value, z.string().trim().min(1).optional());
+const defaultedEnvString = (defaultValue: string, maxLength: number) =>
+  z.preprocess((value) => value === "" ? undefined : value, z.string().trim().min(1).max(maxLength).default(defaultValue));
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -21,6 +24,9 @@ const envSchema = z.object({
   ASAAS_API_KEY: z.string().optional(),
   ASAAS_ENVIRONMENT: z.enum(["sandbox", "production"]).default("sandbox"),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+  STATIC_PIX_FALLBACK_KEY: optionalEnvString,
+  STATIC_PIX_FALLBACK_MERCHANT_NAME: defaultedEnvString("PRESIDENTE CAES", 25),
+  STATIC_PIX_FALLBACK_MERCHANT_CITY: defaultedEnvString("SANTA ROSA", 15),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().min(3).default("Centro Academico <noreply@example.com>"),
   SESSION_SECRET: z.string().min(32).default(developmentSessionSecret),

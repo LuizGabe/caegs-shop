@@ -580,6 +580,13 @@ type Payment = {
   pixCopyPasteCode: string | null;
   pixExpiresAt: string | null;
   confirmedAt: string | null;
+  fallbackPix: {
+    active: true;
+    reason: "ASAAS_PIX_DEGRADED";
+    copyPasteCode: string;
+    qrCodeImage: string;
+    manualConfirmationNotice: string;
+  } | null;
 };
 
 export function PaymentPage() {
@@ -619,6 +626,9 @@ export function PaymentPage() {
 
   const payment = query.data.payment;
   const paid = payment.status === "CONFIRMED";
+  const fallbackPix = payment.fallbackPix?.active ? payment.fallbackPix : null;
+  const pixCopyPasteCode = fallbackPix?.copyPasteCode ?? payment.pixCopyPasteCode ?? "";
+  const pixQrCodeImage = fallbackPix?.qrCodeImage ?? (payment.pixQrCodeImage ? `data:image/png;base64,${payment.pixQrCodeImage}` : null);
 
   return (
     <section className="mx-auto max-w-2xl">
@@ -628,7 +638,7 @@ export function PaymentPage() {
             <span className="text-xs font-mono text-slate-400 uppercase">Pedido #{payment.orderHumanReadableId}</span>
             <p className="mt-1 text-[11px] text-slate-400 font-mono break-all">Referência técnica: {payment.orderPublicId}</p>
             <h1 className="text-2xl font-bold text-slate-900 mt-0.5">
-              {paid ? "Pagamento Confirmado!" : "Pague com PIX"}
+              {paid ? "Pagamento Confirmado!" : fallbackPix ? "Pague com PIX alternativo" : "Pague com PIX"}
             </h1>
           </div>
           <Badge variant={paid ? "blue" : "amber"} dot className="w-fit">
@@ -652,10 +662,24 @@ export function PaymentPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center py-2">
+          <div className="space-y-5 py-2">
+            {fallbackPix && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <div className="flex items-start gap-3">
+                  <ShieldAlert size={20} className="mt-0.5 shrink-0 text-amber-700" />
+                  <div className="space-y-1">
+                    <p className="font-extrabold text-slate-900">Sistema de pagamentos degradado</p>
+                    <p className="text-xs leading-relaxed text-slate-700">O Pix dinamico do Asaas esta com instabilidade. Use o Pix alternativo abaixo para concluir o pagamento.</p>
+                    <p className="text-xs leading-relaxed text-slate-700">{fallbackPix.manualConfirmationNotice}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          <div className="grid gap-6 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
             <div className="mx-auto aspect-square w-full max-w-[240px] rounded-2xl border border-slate-200 bg-white p-3 shadow-xs flex items-center justify-center sm:max-w-none">
-              {payment.pixQrCodeImage ? (
-                <img className="h-full w-full object-contain" src={`data:image/png;base64,${payment.pixQrCodeImage}`} alt="QR Code PIX" />
+              {pixQrCodeImage ? (
+                <img className="h-full w-full object-contain" src={pixQrCodeImage} alt="QR Code PIX" />
               ) : (
                 <QrCode className="h-24 w-24 text-slate-300" />
               )}
@@ -672,7 +696,7 @@ export function PaymentPage() {
                 <div className="flex min-w-0 flex-col items-stretch gap-2 sm:flex-row">
                   <textarea
                     readOnly
-                    value={payment.pixCopyPasteCode ?? ""}
+                    value={pixCopyPasteCode}
                     className="min-h-[84px] min-w-0 flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 text-[11px] font-mono text-slate-700 leading-tight focus:outline-none"
                   />
                   <Button
@@ -680,7 +704,7 @@ export function PaymentPage() {
                     variant="secondary"
                     className="shrink-0 px-3"
                     onClick={async () => {
-                      await navigator.clipboard.writeText(payment.pixCopyPasteCode ?? "");
+                      await navigator.clipboard.writeText(pixCopyPasteCode);
                       setCopied(true);
                     }}
                   >
@@ -690,7 +714,7 @@ export function PaymentPage() {
               </div>
 
               <div className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200/80">
-                <p>O status do pedido será atualizado automaticamente assim que o pagamento for confirmado pelo banco.</p>
+                <p>{fallbackPix ? "A confirmacao pode levar mais tempo porque sera conferida manualmente." : "O status do pedido sera atualizado automaticamente assim que o pagamento for confirmado pelo banco."}</p>
                 {payment.pixExpiresAt && (
                   <p className="mt-1 text-[11px] font-mono text-slate-400">
                     Vencimento: {new Date(payment.pixExpiresAt).toLocaleString("pt-BR")}
@@ -698,6 +722,7 @@ export function PaymentPage() {
                 )}
               </div>
             </div>
+          </div>
           </div>
         )}
       </GlassCard>

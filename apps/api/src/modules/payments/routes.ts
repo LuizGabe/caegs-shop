@@ -7,6 +7,7 @@ import { requireAuthenticated } from "../auth/guards.js";
 import { createHumanReadableOrderFields, createOrderSchema, createPublicOrderId, orderForApi, orderInclude } from "../orders/service.js";
 import type { PaymentProvider } from "./provider.js";
 import { paymentForApi, paymentInclude } from "./service.js";
+import { staticPixFallbackForPayment } from "./static-pix-fallback.js";
 
 const idempotencyHeader = z.string().trim().min(16).max(200);
 const cpfCnpjSchema = z.string().transform((value) => value.replace(/\D/g, "")).refine(isValidCpfCnpj, "CPF ou CNPJ invalido.");
@@ -76,7 +77,19 @@ export function paymentRoutes(provider: PaymentProvider): FastifyPluginAsync {
       if (!payment) {
         return reply.status(404).send({ error: { code: "PAYMENT_NOT_FOUND", message: "Pagamento nao encontrado." } });
       }
-      return { payment: paymentForApi(payment) };
+      const paymentOutput = paymentForApi(payment);
+      return {
+        payment: {
+          ...paymentOutput,
+          fallbackPix: payment.status === "PENDING"
+            ? await staticPixFallbackForPayment({
+              orderNumber: payment.order.orderNumber,
+              orderYear: payment.order.orderYear,
+              amount: paymentOutput.amount
+            })
+            : null
+        }
+      };
     });
 
   };
