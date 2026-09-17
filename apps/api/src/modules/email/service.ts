@@ -66,15 +66,33 @@ export class ResendEmailTransport implements EmailTransport {
 
   async send(input: { to: string; subject: string; html: string }) {
     if (!this.apiKey) throw new Error("RESEND_API_KEY nao configurada.");
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      signal: AbortSignal.timeout(10_000),
-      headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: this.from, to: [input.to], subject: input.subject, html: input.html })
-    });
-    const body = await response.json().catch(() => null) as { id?: unknown; message?: unknown } | null;
-    if (!response.ok || typeof body?.id !== "string") throw new Error(typeof body?.message === "string" ? body.message : "Falha no envio pelo Resend.");
-    return { id: body.id };
+    const maxAttempts = 3;
+    let backoffMs = 1_000;
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      let response: Response;
+      try {
+        response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          signal: AbortSignal.timeout(10_000),
+          headers: { authorization: "Bearer ".concat(this.apiKey), "content-type": "application/json" },
+          body: JSON.stringify({ from: this.from, to: [input.to], subject: input.subject, html: input.html })
+        });
+      } catch (error) {
+        if (error instanceof Error) lastError = error;
+        if (attempt === maxAttempts) throw lastError ?? new Error("Falha no envio pelo Resend.");
+        await wait(backoffMs);
+        backoffMs *= 2;
+        continue;
+      }
+      const body = await response.json().catch(() => null) as { id?: unknown; message?: unknown } | null;
+      if (response.ok && typeof body?.id === "string") return { id: body.id };
+      lastError = new Error(typeof body?.message === "string" ? body.message : "Falha no envio pelo Resend.");
+      if (attempt === maxAttempts || !shouldRetryStatus(response.status)) throw lastError;
+      await wait(getRetryDelayMs(response.headers.get("retry-after")) ?? backoffMs);
+      backoffMs *= 2;
+    }
+    throw lastError ?? new Error("Falha no envio pelo Resend.");
   }
 }
 
@@ -86,3 +104,21 @@ function safeError(error: unknown) {
   return (error instanceof Error ? error.message : "Falha desconhecida no envio.").slice(0, 500);
 }
 
+
+
+function shouldRetryStatus(status: number) {
+  return status === 429 || status >= 500;
+}
+
+function getRetryDelayMs(retryAfter: string | null) {
+  if (!retryAfter) return null;
+  const seconds = Number(retryAfter);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds * 1_000);
+  const timestamp = Date.parse(retryAfter);
+  if (Number.isNaN(timestamp)) return null;
+  return Math.max(0, timestamp - Date.now());
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
