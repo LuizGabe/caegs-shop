@@ -275,20 +275,27 @@ async function notifyBatchOrders(emailService: EmailService, type: EmailNotifica
   pickupTime: Date | null;
   orders: Array<{ order: { id: string; publicId: string; humanReadableId: string; user: { id: string; name: string; email: string } } }>;
 }) {
-  await Promise.all(batch.orders.map(({ order }) => emailService.notify({
-    type,
-    deduplicationKey: `${type}:${order.id}`,
-    userId: order.user.id,
-    orderId: order.id,
-    to: order.user.email,
-    name: order.user.name,
-    orderPublicId: order.publicId,
-    orderHumanReadableId: order.humanReadableId,
-    pickupLocation: batch.pickupLocation,
-    pickupNotes: batch.pickupNotes,
-    pickupDate: batch.pickupDate?.toISOString().slice(0, 10) ?? null,
-    pickupTime: batch.pickupTime?.toISOString().slice(11, 16) ?? null
-  })));
+  for (const [index, { order }] of batch.orders.entries()) {
+    await emailService.notify({
+      type,
+      deduplicationKey: `${type}:${order.id}`,
+      userId: order.user.id,
+      orderId: order.id,
+      to: order.user.email,
+      name: order.user.name,
+      orderPublicId: order.publicId,
+      orderHumanReadableId: order.humanReadableId,
+      pickupLocation: batch.pickupLocation,
+      pickupNotes: batch.pickupNotes,
+      pickupDate: batch.pickupDate?.toISOString().slice(0, 10) ?? null,
+      pickupTime: batch.pickupTime?.toISOString().slice(11, 16) ?? null
+    });
+    if (index < batch.orders.length - 1) await wait(150);
+  }
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 async function updateOrderStatuses(tx: Pick<typeof prisma, "order" | "orderStatusHistory">, orderIds: string[], status: OrderFulfillmentStatus, actorUserId: string, note: string) {
@@ -311,5 +318,4 @@ async function updateOrderStatuses(tx: Pick<typeof prisma, "order" | "orderStatu
     });
   }
 }
-
 
