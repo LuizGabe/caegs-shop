@@ -1,105 +1,126 @@
-# Centro Academico de Engenharia de Software Platform
+**English** · [Português](README.pt-BR.md)
 
-Production-oriented commerce and operations platform for the Software Engineering Academic Center.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme/header-dark-en.svg">
+    <img src="assets/readme/header-light-en.svg" alt="CAEGS Shop — student commerce, from checkout to pickup" width="1000">
+  </picture>
+</p>
 
-The first release focuses on institutional Google sign-in, course eligibility, product sales, PIX checkout through Asaas, order tracking, production batches, pickup management, auditing, and operational reporting.
+# CAEGS Shop
 
-## Stack
+A commerce and operations platform for **CAES, the Software Engineering Academic Center**. Students browse merchandise, pay through PIX and track their orders; the academic center manages the catalog, payments, production batches and pickup in one place.
 
-- Monorepo with pnpm workspaces
-- Web: Vite, React, TypeScript, React Router, TanStack Query, Tailwind CSS, shadcn/ui
-- API: Node.js, TypeScript, Fastify, Zod
-- Database: PostgreSQL with Prisma ORM
-- Auth: Google OAuth 2.0 / OpenID Connect
-- Payments: Asaas PIX only in this release
-- Email: Resend integration prepared, globally disabled by default
-- Runtime: Docker and Docker Compose, reverse-proxy ready for Nginx and Cloudflare
+The project connects the storefront to the work behind every order: institutional authentication, course eligibility, Asaas payment webhooks, fulfillment and operational reporting.
 
-Privacy and retention notes are documented in [docs/privacy-and-retention.md](docs/privacy-and-retention.md).
+[Getting started](#03--local-development) · [Architecture](docs/architecture.md) · [Production deployment](docs/deployment.md)
 
-## Project Structure
+## 01 / From checkout to pickup
+
+```mermaid
+flowchart LR
+    A[Institutional Google sign-in] --> B[Catalog and checkout]
+    B --> C[Asaas PIX payment]
+    C --> D[Payment webhook]
+    D --> E[Production batch]
+    E --> F[Pickup]
+```
+
+| Area | What the platform handles |
+| --- | --- |
+| Access | Google OAuth / OIDC, institutional email validation, sessions and course-based purchase eligibility. |
+| Storefront | Products, variants, images, announcements, cart and order tracking. |
+| Payments | Asaas PIX checkout, webhook deduplication, status transitions and admin cancellation / refund flows. |
+| Fulfillment | Paid orders grouped into production batches, pickup scheduling and tracking. |
+| Operations | Dashboard, user and order management, reports, CSV exports and audit logs. |
+| Data lifecycle | Configurable retention and privacy cleanup; Resend integration disabled by default in application settings. |
+
+These areas have implementations in the repository. The API includes automated tests for authentication, orders, payments, webhooks, production, reports, email and privacy. The web test script is currently a placeholder. This describes the code; it does not certify production readiness.
+
+## 02 / Engineering notes
+
+| Layer | Technologies |
+| --- | --- |
+| Web | React 19, TypeScript, Vite, React Router, TanStack Query, Tailwind CSS, Lucide |
+| API | Node.js 22, TypeScript, Fastify, Zod |
+| Data | PostgreSQL 16, Prisma ORM |
+| Integrations | Google OIDC, Asaas PIX, Resend |
+| Runtime | pnpm workspaces, Docker Compose, Nginx |
+
+The API checks identity, eligibility, prices and totals. Orders preserve product and price snapshots, payment and fulfillment have separate statuses, and webhook processing handles duplicate events.
 
 ```text
-/
-  apps/
-    web/
-    api/
-  packages/
-    shared/
-  prisma/
-  docs/
-  docker-compose.yml
-  pnpm-workspace.yaml
-  package.json
+apps/web/              React storefront and administration
+apps/api/              Fastify API and domain modules
+packages/shared/       Shared schemas, types and constants
+prisma/                Database schema, migrations and development seeds
+docs/                  Architecture, operations and privacy notes
+assets/readme/         Localized light/dark README headers
+scripts/               Documentation asset generator
 ```
 
-## Development Roadmap
+## 03 / Local development
 
-The project is implemented in functional stages. Each stage should compile and receive an English semantic commit.
+Use **Node.js 22**, **pnpm 9.15.0** (pinned in `package.json`) and **Docker Compose**. Run commands from the repository root.
 
-1. Repository, monorepo, Docker, PostgreSQL, Prisma, configuration, and health checks.
-2. Google OIDC, sessions, users, courses, purchase authorization, and admin role enforcement.
-3. Products, variants, images, announcements, and product administration.
-4. Cart, orders, snapshots, and checkout.
-5. Asaas PIX integration, webhooks, idempotency, and payment status transitions.
-6. User order area, admin dashboard, filters, pagination, and metrics.
-7. Production batches, pickup flow, and CSV exports.
-8. Resend service, email toggle, audit coverage, and security hardening.
-9. Critical tests, production Docker review, and documentation completion.
-
-## Current Status
-
-Initial repository and architecture documentation are being established before implementation, as required by the product specification.
-
-## Production Deployment
-
-The production compose file is `docker-compose.prod.yml`. It is intended to run on the private `services` VM behind the edge nginx reverse proxy.
-
-Expected production shape:
-
-- app directory: `/srv/docker/apps/caegs-shop`
-- public origin: `https://caegs-shop.luizgabe.dev.br`
-- public entrypoint: edge nginx on TCP `80`/`443`
-- private app listener: `10.0.2.10:8080`
-- database: existing Docker network `db`, with PostgreSQL kept private
-- uploads: Docker volume `uploads_data`
-
-Create `.env.production` from `.env.production.example` on the server and fill real secrets outside Git.
-
-Before first start, create the app database and user on the private PostgreSQL container:
+1. Copy `.env.example` to `.env`: `cp .env.example .env` in a POSIX shell, or `Copy-Item .env.example .env` in PowerShell.
+2. Set `SESSION_SECRET` to a random value of at least 32 characters. Configure Google OAuth credentials, keeping `GOOGLE_REDIRECT_URI=http://localhost:3333/auth/google/callback` for local sign-in.
+3. Install dependencies, start PostgreSQL and apply migrations:
 
 ```sh
-docker exec -it postgres psql -U postgres
+corepack enable
+pnpm install --frozen-lockfile
+docker compose up -d postgres
+pnpm db:generate
+pnpm db:deploy
+pnpm --filter @ca/shared build
+pnpm dev
 ```
 
-```sql
-CREATE USER caegs_shop WITH PASSWORD 'replace-with-db-password';
-CREATE DATABASE caegs_shop OWNER caegs_shop;
-GRANT ALL PRIVILEGES ON DATABASE caegs_shop TO caegs_shop;
-```
+| Service | Local address |
+| --- | --- |
+| Web | http://localhost:5173 |
+| API health | http://localhost:3333/health |
+| Database health | http://localhost:3333/health/db |
 
-Then deploy:
+An empty database needs courses and products before the purchase flow is useful. The existing development seed **clears application tables before inserting data**. Only for a disposable local database, load `.env` into the process and run the opt-in seed:
 
 ```sh
-mkdir -p backups
-DATABASE_URL="$(sed -n 's/^DATABASE_URL=//p' .env.production | tail -n 1 | tr -d '\r')"
-docker run --rm --network db -v "$PWD/backups:/backups" postgres:16-alpine \
-  pg_dump "${DATABASE_URL%%\?*}" --format=custom --no-owner --no-privileges \
-  --file="/backups/caegs-shop-pre-migrate-$(date -u +%Y%m%dT%H%M%SZ).dump"
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml run --rm --no-deps api pnpm db:deploy
-docker compose -f docker-compose.prod.yml up -d --remove-orphans
-curl -fsS http://10.0.2.10:8080/health
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs --tail=100 api
+pnpm exec tsx --env-file=.env -e "process.env.ALLOW_DATABASE_RESET='true'; import('./prisma/seed.ts')"
 ```
 
-The production deploy order is backup, build, `pnpm db:deploy` (`prisma migrate deploy`), service restart, then healthcheck. If the migration command fails, stop before `up -d`; do not use `prisma db push` or `prisma migrate reset` in production.
+The seed makes Software Engineering eligible to purchase and Computer Science ineligible. Sign-in requires a verified `sou.unijui.edu.br` or `unijui.edu.br` account. Initial administrators are promoted directly in the database; public registration and password login are outside the current scope.
 
-The edge nginx server block should proxy `caegs-shop.luizgabe.dev.br` to `http://10.0.2.10:8080`. Google OAuth must allow this redirect URI:
+For PIX, set `ASAAS_API_KEY` and `ASAAS_WEBHOOK_TOKEN`, keep `ASAAS_ENVIRONMENT=sandbox` locally, and configure Asaas to call a reachable `/webhooks/asaas` endpoint with the matching `asaas-access-token` header. In production the public path is `/api/webhooks/asaas`. Google sign-in and PIX require provider configuration; the setup above does not simulate them.
 
-```text
-https://caegs-shop.luizgabe.dev.br/api/auth/google/callback
+### Validation
+
+```sh
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-The public API prefix is `/api`. The web nginx container strips that prefix before proxying to the Fastify API, so the API application still receives routes such as `/auth/google/callback`, `/products`, and `/orders`.
+`pnpm test` runs the API suite; web and shared currently have placeholder test scripts. These checks do not replace sandbox validation of Google OAuth and Asaas.
+
+## 04 / Deployment and documentation
+
+- [Production deployment](docs/deployment.md): private services VM, PostgreSQL network, backups, migrations and reverse proxy configuration.
+- [Privacy and retention](docs/privacy-and-retention.md): stored data, retention settings and cleanup.
+- [Architecture plan](docs/architecture.md): domain boundaries and key flows. Some planned directory names differ from the current layout above.
+- [Implementation decisions](docs/implementation-decisions.md): scope and technical constraints.
+- [Prisma plan](docs/prisma-plan.md): database design notes.
+
+The privacy guide also has English and Portuguese versions; the other technical guides are in English. The production workflow builds and transfers Docker images through WireGuard / SSH and calls a server-side deploy script. A push to `main` triggers it; review the workflow and deployment guide before publishing changes.
+
+## 05 / Documentation and visual identity
+
+English is the default repository language, with a [Portuguese README](README.pt-BR.md). Update both versions together. The student-facing interface uses Brazilian Portuguese and BRL.
+
+The headers borrow the engineering notebook style of [LuizGabe's profile](https://github.com/LuizGabe): a quiet grid, indigo accents and sketches of merchandise and order paperwork. The focus here stays on the product and its operation.
+
+English / Portuguese and light / dark variants are selected with `<picture>`. Regenerate them with Python 3, without external dependencies:
+
+```sh
+python scripts/generate_readme_assets.py
+```

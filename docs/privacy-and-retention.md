@@ -1,39 +1,41 @@
-# Privacidade, retencao e secrets
+**English** · [Português](privacy-and-retention.pt-BR.md)
 
-Este projeto minimiza dados pessoais por padrao nas telas administrativas e separa exportacoes operacionais de exportacoes com dados pessoais.
+# Privacy, retention and secrets
 
-## Dados tratados
+This project minimizes personal data in administrative screens by default and separates operational exports from exports containing personal data.
 
-- Google: autenticacao OIDC, nome, e-mail verificado, identificador Google e URL de avatar enquanto a conta esta ativa.
-- Asaas: criacao de cliente/cobranca PIX com nome, e-mail e CPF/CNPJ informado no checkout. O CPF/CNPJ nao e persistido na plataforma.
-- Resend: envio de notificacoes por e-mail quando habilitado no painel administrativo.
-- Nginx/Cloudflare: proxy de trafego HTTP; podem processar IP, user-agent e metadados de requisicao conforme a configuracao de infraestrutura.
+## Data processed
 
-Nao ha analytics ou APM configurados no codigo atual.
+- Google: OIDC authentication, name, verified email, Google identifier and avatar URL while the account is active.
+- Asaas: PIX customer / charge creation using the name, email and CPF/CNPJ supplied at checkout. CPF/CNPJ is not persisted in the platform.
+- Resend: email notifications when enabled in the administrative panel.
+- Nginx/Cloudflare: HTTP traffic proxying; IP addresses, user agents and request metadata may be processed according to infrastructure configuration.
 
-## Retencao tecnica inicial
+No analytics or APM is configured in the current code.
 
-- Sessoes expiradas ou revogadas: apagar depois de 30 dias.
-- Webhooks Asaas: manter a linha, mas limpar `payload` e `errorMessage` depois de 180 dias.
-- EmailEvent: limpar `errorMessage` depois de 90 dias e minimizar vinculos pessoais depois de 180 dias.
-- AuditLog: manter historico; limpar `ipAddress` e `userAgent` depois de 90 dias.
-- Dados PIX (`pixQrCodeImage`, `pixCopyPasteCode`): limpar 30 dias depois de estado terminal.
-- Pedidos, itens, pagamentos, status e snapshots: manter para integridade historica, suporte e conciliacao.
+## Initial technical retention
 
-Os prazos sao configuraveis por variaveis `PRIVACY_*` nos arquivos de ambiente.
+- Expired or revoked sessions: delete after 30 days.
+- Asaas webhooks: keep the row, but clear `payload` and `errorMessage` after 180 days.
+- EmailEvent: clear `errorMessage` after 90 days and minimize personal associations after 180 days.
+- AuditLog: keep history; clear `ipAddress` and `userAgent` after 90 days.
+- PIX data (`pixQrCodeImage`, `pixCopyPasteCode`): clear 30 days after reaching a terminal state.
+- Orders, items, payments, statuses and snapshots: retain for historical integrity, support and reconciliation.
+
+Periods are configurable through `PRIVACY_*` variables in the environment files.
 
 ## Cleanup
 
-Use dry-run antes da execucao real:
+Use a dry run before actual execution:
 
 ```bash
 pnpm privacy:cleanup --dry-run
 pnpm privacy:cleanup
 ```
 
-A saida mostra apenas contagens agregadas, sem nomes, e-mails, IPs, CPF/CNPJ ou payloads.
+Output contains aggregate counts only, without names, emails, IP addresses, CPF/CNPJ or payloads.
 
-O deploy nao executa `pnpm privacy:cleanup` automaticamente. Para executar manualmente na VPS:
+Deployment does not run `pnpm privacy:cleanup` automatically. To run it manually on the VPS:
 
 ```bash
 cd /srv/docker/apps/caegs-shop
@@ -41,27 +43,27 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps api pnpm privacy:cl
 docker compose -f docker-compose.prod.yml run --rm --no-deps api pnpm privacy:cleanup
 ```
 
-Para agendar uma execucao diaria com cron no host `services`, use:
+To schedule a daily run with cron on the `services` host:
 
 ```cron
 17 3 * * * cd /srv/docker/apps/caegs-shop && docker compose -f docker-compose.prod.yml run --rm --no-deps api pnpm privacy:cleanup >> /var/log/caegs-shop-privacy-cleanup.log 2>&1
 ```
 
-## Anonimizacao
+## Anonymization
 
-A rotina interna `anonymizeUser` remove a identidade pessoal da conta, revoga sessoes e preserva pedidos/pagamentos. Ela nao registra e-mail, nome, Google subject ou avatar antigos no AuditLog.
+The internal `anonymizeUser` routine removes the account's personal identity, revokes sessions and preserves orders / payments. It does not record the previous email, name, Google subject or avatar in AuditLog.
 
-## Secrets em VPS pequena
+## Secrets on a small VPS
 
-Nao versionar `.env` ou `.env.production`. Eles ja estao cobertos pelo `.gitignore`.
+Do not commit `.env` or `.env.production`. They are already covered by `.gitignore`.
 
-Na VPS Linux, recomenda-se:
+On a Linux VPS, the recommended permissions are:
 
 ```bash
-chown <usuario-da-app>:<grupo-da-app> .env.production
+chown <app-user>:<app-group> .env.production
 chmod 600 .env.production
 ```
 
-Remova do ambiente de producao qualquer secret que nao faca parte do runtime. Em especial, `GEMINI_API_KEY` deve ficar fora de producao se for usada apenas para seed, analise de imagem ou desenvolvimento.
+Remove any secret from the production environment that is not part of the runtime. In particular, keep `GEMINI_API_KEY` out of production if it is used only for seeding, image analysis or development.
 
-O deploy atual injeta variaveis via `env_file: .env.production` no Docker Compose de producao.
+The current deployment injects environment variables through `env_file: .env.production` in the production Docker Compose file.

@@ -1,0 +1,62 @@
+# Production deployment
+
+[README / English](../README.md) · [README / Português](../README.pt-BR.md)
+
+## Automated deployment
+
+The [production workflow](../.github/workflows/deploy-production.yml) runs on pushes to `main` or manual dispatch. It builds the API and web Docker images, packages them with the production Compose file and checksums, then transfers the artifact through WireGuard and SSH. The server verifies checksums and invokes `/usr/local/sbin/deploy-caegs-shop`.
+
+The workflow expects the `WG_CONFIG` and `SSH_PRIVATE_KEY_B64` repository secrets and a provisioned deployment host. The server-side deploy script is not stored in this repository; inspect it on the server when verifying its backup, migration and restart behavior.
+
+## Manual deployment reference
+
+The production compose file is `docker-compose.prod.yml`. It is intended to run on the private `services` VM behind the edge nginx reverse proxy.
+
+Expected production shape:
+
+- app directory: `/srv/docker/apps/caegs-shop`
+- public origin: `https://caegs-shop.luizgabe.dev.br`
+- public entrypoint: edge nginx on TCP `80`/`443`
+- private app listener: `10.0.2.10:8080`
+- database: existing Docker network `db`, with PostgreSQL kept private
+- uploads: Docker volume `uploads_data`
+
+Create `.env.production` from `.env.production.example` on the server and fill real secrets outside Git.
+
+Before first start, create the app database and user on the private PostgreSQL container:
+
+```sh
+docker exec -it postgres psql -U postgres
+```
+
+```sql
+CREATE USER caegs_shop WITH PASSWORD 'replace-with-db-password';
+CREATE DATABASE caegs_shop OWNER caegs_shop;
+GRANT ALL PRIVILEGES ON DATABASE caegs_shop TO caegs_shop;
+```
+
+Then deploy:
+
+```sh
+mkdir -p backups
+DATABASE_URL="$(sed -n 's/^DATABASE_URL=//p' .env.production | tail -n 1 | tr -d '\r')"
+docker run --rm --network db -v "$PWD/backups:/backups" postgres:16-alpine \
+  pg_dump "${DATABASE_URL%%\?*}" --format=custom --no-owner --no-privileges \
+  --file="/backups/caegs-shop-pre-migrate-$(date -u +%Y%m%dT%H%M%SZ).dump"
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml run --rm --no-deps api pnpm db:deploy
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+curl -fsS http://10.0.2.10:8080/health
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs --tail=100 api
+```
+
+The production deploy order is backup, build, `pnpm db:deploy` (`prisma migrate deploy`), service restart, then healthcheck. If the migration command fails, stop before `up -d`; do not use `prisma db push` or `prisma migrate reset` in production.
+
+The edge nginx server block should proxy `caegs-shop.luizgabe.dev.br` to `http://10.0.2.10:8080`. Google OAuth must allow this redirect URI:
+
+```text
+https://caegs-shop.luizgabe.dev.br/api/auth/google/callback
+```
+
+The public API prefix is `/api`. The web nginx container strips that prefix before proxying to the Fastify API, so the API application still receives routes such as `/auth/google/callback`, `/products`, and `/orders`.
