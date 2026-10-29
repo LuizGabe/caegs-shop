@@ -124,3 +124,7 @@ English / Portuguese and light / dark variants are selected with `<picture>`. Re
 ```sh
 python scripts/generate_readme_assets.py
 ```
+
+## License
+
+Licensed under the [MIT License](LICENSE).

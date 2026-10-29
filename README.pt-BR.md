@@ -124,3 +124,7 @@ As variantes em inglês / português e para temas claro / escuro são selecionad
 ```sh
 python scripts/generate_readme_assets.py
 ```
+
+## Licença
+
+Distribuído sob a [licença MIT](LICENSE).
